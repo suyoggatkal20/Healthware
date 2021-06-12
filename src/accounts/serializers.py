@@ -1,7 +1,13 @@
+from django.utils.translation import gettext_lazy as _
+
 from rest_framework import serializers
 from rest_framework.fields import FloatField
-from accounts.models import *;
-from rest_framework.serializers import ModelSerializer
+from accounts.models import *
+from rest_framework.serializers import ModelSerializer, Serializer
+
+from django.db.transaction import atomic
+from string import ascii_uppercase
+from random import choice
 
 class DynamicFieldsModelSerializer(ModelSerializer):
     """
@@ -12,15 +18,22 @@ class DynamicFieldsModelSerializer(ModelSerializer):
     def __init__(self, *args, **kwargs):
         # Don't pass the 'fields' arg up to the superclass
         fields = kwargs.pop('fields', None)
-
+        exclude = kwargs.pop('exclude', None)
         # Instantiate the superclass normally
         super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
         # self.fields=fields
+        if fields and exclude:
+            raise Exception('specified both fields and exclude')
         if fields is not None:
             # Drop any fields that are not specified in the `fields` argument.
             allowed = set(fields)
             existing = set(self.fields)
             for field_name in (existing - allowed):
+                self.fields.pop(field_name)
+        if exclude is not None:
+            # Drop any fields that are not specified in the `fields` argument.
+            not_allowed = set(exclude)
+            for field_name in not_allowed:
                 self.fields.pop(field_name)
         #print('suyog', self.fields)
 
@@ -30,77 +43,120 @@ class UserSerializer(DynamicFieldsModelSerializer):
         model = User
         fields = '__all__'
 
+
 class PersonSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Person
         fields = '__all__'
+        extra_kwargs = {
+            'media': {'required': False},
+            'user': {'required': False}, }
 
 
 class PatientSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Patient
         fields = '__all__'
+        extra_kwargs = {
+            'married': {'required': False},
+            'occupation': {'required': False},
+            'blood_group': {'required': False},
+            'education': {'required': False}, }
 
 
 class DoctorSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Doctor
         fields = '__all__'
+        extra_kwargs = {
+            'is_vc_available': {'required': False},
+            'call_active': {'required': False}, }
 
 
 class AddressSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Address
         fields = '__all__'
+
+
+
+
 class PhoneSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Phone
         fields = '__all__'
+        extra_kwargs = {'country_code': {'required': False}}
+
 
 class EmergencyContactSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = EmergencyContact
         fields = '__all__'
+        extra_kwargs = {'country_code': {'required': False},
+                        'relation': {'required': False}}
+
 
 class EmailSerializer(DynamicFieldsModelSerializer):
+    person=serializers.SerializerMethodField()
     class Meta:
         model = Email
         fields = '__all__'
+    # def get_person(self,obj):
+    #     if self.context['person']:
+    #         return self.context['person'];
+    #     else:
+    #         return PersonSerializer();
+
 
 class AllergiesSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Allergies
         fields = '__all__'
 
+
 class PastDiseasesSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = PastDiseases
         fields = '__all__'
+
 
 class OtherSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Other
         fields = '__all__'
 
+
 class AddictionsSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Addictions
         fields = '__all__'
 
-class MedicinesSerializer(DynamicFieldsModelSerializer):
-    class Meta:
-        model = Medicines
-        fields = '__all__'
+# class MedicinesSerializer(DynamicFieldsModelSerializer):
+#     class Meta:
+#         model = Medicines
+#         fields = '__all__'
+
 
 class WeightSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Weight
         fields = '__all__'
+    def create(self, data):
+        patient=self.context['request'].user.person.patient;
+        weight = Weight.objects.create(patient=patient, **data)
+        weight.save()
+        return weight;
 
 class HeightSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Height
         fields = '__all__'
+
+    def create(self, data):
+        patient=self.context['request'].user.person.patient;
+        height = Height.objects.create(patient=patient, **data)
+        height.save()
+        return height;
 
 
 class CholesterolSerializer(DynamicFieldsModelSerializer):
@@ -108,46 +164,48 @@ class CholesterolSerializer(DynamicFieldsModelSerializer):
         model = Cholesterol
         fields = '__all__'
 
+
 class BloodPressureSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = BloodPressure
         fields = '__all__'
+
 
 class GlocoseSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Glocose
         fields = '__all__'
 
+
 class BreakSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Break
         fields = '__all__'
+
 
 class RatingSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Rating
         fields = '__all__'
 
-class AppointmentSerializer(DynamicFieldsModelSerializer):
-    class Meta:
-        model = Appointment
-        fields = '__all__'
+
+# class AppointmentSerializer(DynamicFieldsModelSerializer):
+#     class Meta:
+#         model = Appointment
+#         fields = '__all__'
+
+
 
 class PrescriptionSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Prescription
         fields = '__all__'
 
-class MedicineScheduleViewSet(DynamicFieldsModelSerializer):
-    class Meta:
-        model = MedicineSchedule
-        fields = '__all__'
 
-class MedicineScheduleSerializer(DynamicFieldsModelSerializer):
+class MedicineDetailsSerializer(DynamicFieldsModelSerializer):
     class Meta:
-        model = MedicineSchedule
+        model = MedicineDetails
         fields = '__all__'
-
 
 
 class DoctorListSerializer(DynamicFieldsModelSerializer):
@@ -162,50 +220,11 @@ class DoctorListSerializer(DynamicFieldsModelSerializer):
     busy = BreakSerializer(
         many=True, fields=['time_start', 'time_end', 'reason'])
     slot = BreakSerializer(many=True, fields=['time_start'])
-    
-    class Meta:
-        model = Doctor
-        fields = ['first_name', 'last_name', 'dob', 'gender', 'media', 'speciality', 'appoinment_duration', 'practice_started', 'start_time', 'end_time', 'lunch_start',
-                  'lunch_end', 'break_start', 'break_end', 'charge_per_app', 'avg_rating', 'email', 'phone', 'address', 'emergency_contact', 'other', 'busy', 'slot']
-
-
-class DoctorCreateSerializer(DynamicFieldsModelSerializer):
-    email = EmailSerializer(many=True, fields=['email_address'])
-
-    phone = PhoneSerializer(many=True, fields=['country_code', 'phone_no'])
-
-    address = AddressSerializer(many=True, fields=[
-                                'addr_locality', 'addr_district', 'addr_state', 'addr_country', 'addr_pincode'])
-
-    emergency_contact = EmergencyContactSerializer(
-        many=True, fields=['country_code', 'phone_no'])
-
-    other = OtherSerializer(many=True, fields=['key', 'value'])
-
-    def create(self, validated_data):
-        # print(validated_data)
-        emails = validated_data.pop('email')
-        phones = validated_data.pop('phone')
-        addresses = validated_data.pop('address')
-        emergency_contacts = validated_data.pop('emergency_contact')
-        others = validated_data.pop('other')
-        # print(validated_data)
-        doctor = Doctor.objects.create(**validated_data)
-        self.save_(Email,  doctor, emails)
-        self.save_(Phone,  doctor, phones)
-        self.save_(Address,  doctor, addresses)
-        self.save_(EmergencyContact,  doctor, emergency_contacts)
-        self.save_(Other,  doctor, others)
-        return doctor
-
-    def save_(self, Model_, FK, list):
-        for obj in list:
-            Model_.objects.create(person=FK, **obj)
 
     class Meta:
         model = Doctor
-        fields = ['first_name', 'last_name', 'dob', 'gender', 'speciality', 'appoinment_duration', 'practice_started', 'start_time', 'end_time',
-                  'lunch_start', 'lunch_end', 'break_start', 'break_end', 'charge_per_app', 'email', 'phone', 'address', 'emergency_contact', 'other']
+        fields = ['first_name', 'last_name', 'dob', 'gender', 'media', 'speciality', 'appoinment_duration', 'practice_started', 'start_time', 'end_time', 'lunch_start','lunch_end', 'break_start', 'break_end', 'charge_per_app', 'avg_rating', 'email', 'phone', 'address', 'emergency_contact', 'other', 'busy', 'slot']
+
 
 
 class RatingListSerializer(DynamicFieldsModelSerializer):
@@ -220,3 +239,191 @@ class RatingSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Rating
         fields = '__all__'
+
+
+def UniqueEmailValidator(value):
+    try:
+        user = User.objects.get(email=value)
+    except:
+        return value
+    raise serializers.ValidationError('Email Already Registered')
+
+
+
+
+class CreateDoctorSerializer(Serializer):
+    GENDER_CHOICES = (
+        (u'M', u'Doctor'),
+        (u'F', u'Patient'),
+        (u'L', u'Superuser'),
+        (u'N', u'Dont Want to revel'),
+    )
+    email = serializers.EmailField(validators=[UniqueEmailValidator])
+    password = serializers.CharField(max_length=20)
+    country_code = serializers.CharField(max_length=4, required=False)
+    phone = serializers.CharField(max_length=12)
+
+    # person=PersonSerializer()
+    # first_name = serializers.CharField(max_length=20)
+    # last_name = serializers.CharField(max_length=20)
+    # dob = serializers.DateField()
+    # gender = serializers.ChoiceField(GENDER_CHOICES)
+# fields=['gender','dob','last_name','first_name','speciality','degree,appoinment_duration','practice_started','start_time','end_time','charge_per_app','charge_per_app']
+    doctor = DoctorSerializer(exclude=['media', 'id', 'user'])
+    # speciality = serializers.CharField(max_length=120)
+    # degree = serializers.CharField(max_length=120)
+    # appoinment_duration = serializers.DurationField()
+    # practice_started = serializers.DateField()
+    # start_time = serializers.TimeField()
+    # end_time = serializers.TimeField()
+    # charge_per_app = serializers.DecimalField(max_digits=6, decimal_places=2)
+    # c = serializers.DecimalField(max_digits=6, decimal_places=2)
+
+    # address  CreateDoctorSerializer() from accounts.serializers import *;
+    address = AddressSerializer(many=True,exclude=['person', 'id'])
+    # house_no = serializers.CharField(max_length=50)
+    # locality = serializers.CharField(max_length=50)
+    # pin_code = serializers.CharField(max_length=8, required=False)
+
+    def create(self,data):
+        with atomic():
+            user = User.objects.create_user(email=data['email'],
+                                            country_code=data['country_code'],
+                                            phone=data['phone'],
+                                            user_type='D',
+                                            password=data['password'],)
+            user.save()
+            rand=(''.join(choice(ascii_uppercase) for i in range(30)))
+
+            doctor=Doctor(**data["doctor"],media=rand,user=user)
+            doctor.save()
+            email=Email(email=data['email'],person=doctor)
+            email.save()
+            if data['country_code']:
+                phone=Phone(country_code=data['country_code'], phone=data['phone'], person=doctor);
+            else:
+                phone=Phone( phone=data['phone'], person=doctor);
+            phone.save()
+            create_many(Address, data["address"],person=doctor)
+        return doctor;
+
+
+class CreatePatientSerializer(Serializer):
+    GENDER_CHOICES = (
+        (u'M', u'Doctor'),
+        (u'F', u'Patient'),
+        (u'L', u'Superuser'),
+    )
+    email = serializers.EmailField(validators=[UniqueEmailValidator])
+    password = serializers.CharField(max_length=20)
+    country_code = serializers.CharField(max_length=4, required=False)
+    phone = serializers.CharField(max_length=12)
+
+    patient = PatientSerializer(exclude=['media', 'id', 'user'])
+
+    # address  CreateDoctorSerializer() from accounts.serializers import *;
+    address = AddressSerializer(exclude=['person', 'id'], many=True, required=False)
+
+    emergency_contact = EmergencyContactSerializer(
+        exclude=['person',"id"], many=True, required=False)
+
+    allergies = AllergiesSerializer(
+        exclude=['patient',"id"], many=True, required=False)
+
+    past_diseases = PastDiseasesSerializer(
+        exclude=['patient',"id"], many=True, required=False)
+
+    addictions = AddictionsSerializer(
+        exclude=['patient',"id"], many=True, required=False)
+
+    weight = WeightSerializer(exclude=['patient',"id"], many=True, required=False)
+
+    height = HeightSerializer(exclude=['patient',"id"], many=True, required=False)
+
+    cholesterol = CholesterolSerializer(
+        exclude=['patient',"id"], many=True, required=False)
+
+    blood_pressure = BloodPressureSerializer(
+        exclude=['patient',"id"], many=True, required=False)
+
+    glocose = GlocoseSerializer(exclude=['patient',"id"], many=True, required=False)
+    def create(self, data):
+        with atomic():
+            user = User.objects.create_user(email=data['email'],
+                                            country_code=data['country_code'],
+                                            phone=data['phone'],
+                                            user_type='P',
+                                            password=data['password'],)
+            user.save()
+            rand=(''.join(choice(ascii_uppercase) for i in range(30)))
+    
+            patient=Patient.objects.create(media=rand,user=user,**data["patient"])
+            patient.save()
+            email=Email.objects.create(email=data['email'],person=patient)
+            email.save()
+            if data['country_code']:
+                phone=Phone.objects.create(country_code=data['country_code'], phone=data['phone'], person=patient).save();
+            else:
+                phone=Phone.objects.create( phone=data['phone'], person=patient).save();
+            create_many(Address,data.get("address",None),person=patient)
+            create_many(EmergencyContact,data.get("emergency_contact",None),person=patient)
+            create_many(Allergies,data.get("allergies",None),person=patient)
+            create_many(PastDiseases,data.get("past_diseases",None),person=patient)
+            create_many(Addictions,data.get("addictions",None),person=patient)
+            create_many(Weight,data.get("weight",None),person=patient)
+            create_many(Height,data.get("height",None),person=patient)
+            create_many(Cholesterol,data.get("cholesterol",None),person=patient)
+            create_many(BloodPressure,data.get("blood_pressure",None),person=patient)
+            create_many(Glocose,data.get("glocose",None),patient=patient)
+        return patient;
+    
+        
+
+
+class MedicineDetailsSerializer(Serializer):
+    REPEAT_CHOICE = (
+        (u'D1', u'Daily Once'),
+        (u'D2', u'Daily Twice'),
+        (u'D3', u'Daily Trice'),
+        (u'W1', u'Weakly Once'),
+    )
+    repeat = serializers.ChoiceField(choices=REPEAT_CHOICE)
+    is_pre_meal = serializers.BooleanField(default=False)
+    dose = serializers.CharField(max_length=500)
+
+
+# class CreatePrescriptionSerializer(Serializer):
+#     patient = serializers.SerializerMethodField('get_patient')
+#     doctor = serializers.SerializerMethodField('get_doctor')
+#     time = serializers.DateTimeField(null=True)
+#     signature = serializers.CharField(max_length=500, null=True)
+#     def validate_doctor(self, value):
+#         if value:
+#             raise serializers.ValidationError('')
+
+#     def get_doctor(self,obj):
+#         if self.context.request.user.user_type=='D':
+#             return self.context.request.user.person.doctor;
+#         else:
+#             return None;
+
+#     def get_patient(self,obj):
+#         patient_id = self.context.request.patient;
+#         if patient_id:
+#             user=User.objects.get(patient_id)
+#             return User.objects.get(patient_id);
+#         else:
+#             return None;
+
+
+
+def create_many(model,obj_list,**kwargs):
+    if not obj_list:
+        return;
+    if kwargs.get('many',True):
+        for obj in obj_list:
+            model.objects.create(**kwargs, **obj).save()
+    else:
+        model.objects.create(**kwargs, **obj_list).save()
+
+

@@ -16,9 +16,15 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.urls.conf import include
-from accounts import urls
+from accounts import urls as acc_url
+from functionality import urls as fun_url
+from django_email_verification import urls as email_urls
+from appointment import urls as appo_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('account/', include(urls)),
+    path('account/', include(acc_url)),
+    path('functionality/', include(fun_url)),
+    path('appointment/', include(appo_urls)),
+    path('email/', include(email_urls)),
 ]

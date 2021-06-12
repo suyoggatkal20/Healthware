@@ -63,8 +63,9 @@ models = apps.get_models()
 #admin.site.unregister(Site)
 for model in models:
     try:
-        print('count register :'+str(model))
+        #print('count register :'+str(model))
         admin.site.register(model)
     except:
-        print('count non register : '+str(model))
+        #print('count non register : '+str(model))
+        pass
         

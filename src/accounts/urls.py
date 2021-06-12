@@ -19,7 +19,6 @@ router.register('Allergies', AllergiesViewSet, 'Allergies')
 router.register('PastDiseases', PastDiseasesViewSet, 'PastDiseases')
 router.register('Other', OtherViewSet, 'Other')
 router.register('Addictions', AddictionsViewSet, 'Addictions')
-router.register('Medicines', MedicinesViewSet, 'Medicines')
 router.register('Weight', WeightViewSet, 'Weight')
 router.register('Height', HeightViewSet, 'Height')
 router.register('Cholesterol', CholesterolViewSet, 'Cholesterol')
@@ -27,16 +26,18 @@ router.register('BloodPressure', BloodPressureViewSet, 'BloodPressure')
 router.register('Glocose', GlocoseViewSet, 'Glocose')
 router.register('Rating', RatingViewSet, 'Rating')
 router.register('Break', BreakViewSet, 'Break')
-router.register('Appointment', AppointmentViewSet, 'Appointment')
+# router.register('Appointment', AppointmentViewSet, 'Appointment')
 router.register('Prescription', PrescriptionViewSet, 'Prescription')
-router.register('MedicineSchedule',
-                MedicineScheduleViewSet, 'MedicineSchedule')
+router.register('MedicineDeatils',
+                MedicineDetailsViewSet, 'MedicineDeatils')
 urlpatterns = [
     path('', include(router.urls)),
-    # path('auth/', include('django.contrib.auth.urls')),
     path('tables', include('rest_framework.urls', namespace='rest_framework')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('verification/', include('verify_email.urls')),
-    # path('accounts/all_auth/', include('allauth.urls')),
+    path('create_doctor/', CreateDoctor.as_view()),
+    path('create_patient/', CreatePatient.as_view()),
+    path('VerifyEmail/', VerifyEmail.as_view()),
+    
+    
 ]
