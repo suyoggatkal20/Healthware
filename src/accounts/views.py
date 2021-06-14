@@ -128,8 +128,6 @@ class BreakViewSet(ModelViewSet):
     serializer_class = BreakSerializer
 
 
-
-
 class PrescriptionViewSet(ModelViewSet):
     queryset = Prescription.objects.all()
     serializer_class = PrescriptionSerializer
@@ -138,8 +136,6 @@ class PrescriptionViewSet(ModelViewSet):
 class MedicineDetailsViewSet(ModelViewSet):
     queryset = MedicineDetails.objects.all()
     serializer_class = MedicineDetailsSerializer
-
-
 
 
 class CreateDoctor(GenericAPIView, CreateModelMixin):
@@ -151,55 +147,21 @@ class CreateDoctor(GenericAPIView, CreateModelMixin):
         if(serializer.is_valid()):
             data = serializer.validated_data.copy()
             print("valid", data)
-
-            # user_fields=['country_code','phone','user_type']
-
-            # doctor_fields=['user', 'first_name', 'last_name', 'dob', 'gender','media','speciality', 'degree', 'appoinment_duration', 'practice_started', 'start_tUserime','end_time','charge_per_app','charge_per_vc'];
-
-            # email_fields=['person','email']
-
-            # phone_fields=['person','country_code','phone'];
-
-            # address_fields=['person','house_no','locality','pin_code'];
-            # try:
-            #     with atomic():
-            #         user = User.objects.create_user(email=data['email'],
-            #                                         country_code=data['country_code'],
-            #                                         phone=data['phone'],
-            #                                         user_type='D',
-            #                                         password=data['password'],)
-            #         user.save()
-            #         rand=(''.join(choice(ascii_uppercase) for i in range(30)))
-            
-            #         doctor=Doctor(**data["doctor"],media=rand,user=user)
-            #         doctor.save()
-            #         email=Email(email=data['email'],person=doctor)
-            #         email.save()
-            #         if data['country_code']:
-            #             phone=Phone(country_code=data['country_code'], phone=data['phone'], person=doctor);
-            #         else:
-            #             phone=Phone( phone=data['phone'], person=doctor);
-            #         phone.save()
-            #         address=Address(**data["address"],person=doctor)
-            #         address.save()
-            # except ValueError as v:
-            #     print(v)
-            #     error=dict()
-            #     error['possible error 1']='email alreday exist'
-            #     error['possible error 2']='database cound not be updated'
-            #     error['possible error 3']='Integrity constraints voilated'
-            #    return Response(error, status=HTTP_409_CONFLICT)
             try:
-                doctor=serializer.save()
+                doctor = serializer.save()
             except Exception as e:
-                return Response([{'Error':str(e)}], status=HTTP_409_CONFLICT)
-            send_email(doctor.user);
+                return Response([{'Error': str(e)}], status=HTTP_409_CONFLICT)
+            send_email(doctor.user)
             return Response(data=serializer.validated_data, status=HTTP_201_CREATED)
         print("Invalid", serializer.errors)
         return Response(serializer.errors, status=HTTP_201_CREATED)
 
+
 class CreatePatient(GenericAPIView, CreateModelMixin):
-    permission_classes = [AllowAny,]
+    # >>> from accounts.serializers import *
+    # >>> CreatePatientSerializer()
+
+    permission_classes = [AllowAny, ]
     serializer_class = CreatePatientSerializer
 
     def post(self, request, *args, **kwargs):
@@ -207,63 +169,35 @@ class CreatePatient(GenericAPIView, CreateModelMixin):
         if(serializer.is_valid()):
             data = serializer.validated_data.copy()
             print("valid", data)
-            # try:
-            # with atomic():
-            #     user = User.objects.create_user(email=data['email'],
-            #                                     country_code=data['country_code'],
-            #                                     phone=data['phone'],
-            #                                     user_type='P',
-            #                                     password=data['password'],)
-            #     user.save()
-            #     rand=(''.join(choice(ascii_uppercase) for i in range(30)))
-        
-            #     patient=Patient(**data["patient"],media=rand,user=user)
-            #     patient.save()
-            #     email=Email(email=data['email'],person=patient)
-            #     email.save()
-            #     if data['country_code']:
-            #         phone=Phone(country_code=data['country_code'], phone=data['phone'], person=patient);
-            #     else:
-            #         phone=Phone( phone=data['phone'], person=patient);
-            #     phone.save()
-            #     address=Address(**data["address"],person=patient)
-            #     address.save()
-                # emergency_contact=EmergencyContact(data["emergency_contact"],person=patient)
-            # except ValueError as v:
-            #     print(v)
-            #     error=dict()
-            #     error['possible error 1']='email alreday exist'
-            #     error['possible error 2']='database cound not be updated'
-            #     error['possible error 3']='Integrity constraints voilated'
-            #     return Response(error, status=HTTP_409_CONFLICT)
             try:
-                patient=serializer.save()
+                print(serializer.validated_data)
+                patient = serializer.save()
             except Exception as e:
                 raise e
-                #return Response([{'Error':str(e)}], status=HTTP_409_CONFLICT)
-            send_email(patient.user);
+                # return Response([{'Error':str(e)}], status=HTTP_409_CONFLICT)
+            send_email(patient.user)
             return Response(data=serializer.validated_data, status=HTTP_201_CREATED)
         print("Invalid", serializer.errors)
         return Response(serializer.errors, status=HTTP_201_CREATED)
 
 
-
 class VerifyEmail(APIView):
     permission_classes = [AllowAny, ]
+
     def post(self, request):
         if request.data['email']:
             print(request.data['email'])
             try:
-                user=User.objects.get(email=request.data['email'])
+                user = User.objects.get(email=request.data['email'])
             except:
-                responce=dict()
-                responce['Error']="No account found for specified user";
+                responce = dict()
+                responce['Error'] = "No account found for specified user"
                 return Response(responce, status=HTTP_404_NOT_FOUND)
-            send_email(user);
-            responce=dict()
-            responce['Message']="Email sent to specified Email";
+            send_email(user)
+            responce = dict()
+            responce['Message'] = "Email sent to specified Email"
             return Response(responce, status=HTTP_200_OK)
         else:
-            responce=dict()
-            responce['Error']="Please specify email";
+            responce = dict()
+            responce['Error'] = "Please specify email"
             return Response(responce, status=HTTP_404_NOT_FOUND)

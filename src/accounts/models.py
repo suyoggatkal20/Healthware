@@ -11,8 +11,6 @@ from django.contrib.auth.models import AbstractBaseUser, UserManager, AbstractUs
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.models import User
 import datetime
-#from profiles.auth import UserManager
-# Create your models here.
 
 
 class UserManager(UserManager):
@@ -88,11 +86,7 @@ class Person(models.Model):
     dob = models.DateField()
     gender = models.CharField(max_length=2, choices=GENDER_CHOICES, null=True)
     media = models.CharField(max_length=150, null=True)
-# a=User.objects.create_user(email="amc@gmial.com",password="root",country_code="+91",phone="4545656677",user_type='P');
 
-# p=Patient(user=a,first_name='asd',last_name='zxc',dob='1998-12-12',gender='M',media='sdjkcs',married="M",blood_group="A+",education='SSC')
-
-# p.email.add(*[{'email':'asdf@gbd.com'},{'email':'asds2@djz.dsc'},{'email':'bsdjb@sjs.dhn'}])
     def __str__(self):
         return self.first_name+" "+self.last_name
 
@@ -175,8 +169,7 @@ class Phone(models.Model):
     id = models.AutoField(primary_key=True)
     country_code = models.CharField(max_length=3, default="+91")
     phone = models.CharField(max_length=120, null=True)
-    person = models.ForeignKey(
-        Person, related_name='phone', on_delete=models.CASCADE)
+    person = models.ForeignKey(Person, related_name='phone', on_delete=models.CASCADE)
 
 
 class EmergencyContact(models.Model):
@@ -191,29 +184,24 @@ class EmergencyContact(models.Model):
 class Email(models.Model):
     id = models.AutoField(primary_key=True)
     email = models.CharField(max_length=120)
-    person = models.ForeignKey(
-        Person, related_name='email', on_delete=models.CASCADE)
-
+    person = models.ForeignKey(Person, related_name='email', on_delete=models.CASCADE)
 
 class Allergies(models.Model):
     id = models.AutoField(primary_key=True)
     allergies = models.CharField(max_length=120)
-    discription = models.CharField(max_length=1000, null=True)
-    patient = models.ForeignKey(
-        Patient, related_name='allergies', on_delete=models.CASCADE)
-
+    description = models.CharField(max_length=1000, null=True)
+    patient = models.ForeignKey(Patient, related_name='allergies', on_delete=models.CASCADE)
 
 class PastDiseases(models.Model):
     id = models.AutoField(primary_key=True)
     past_diseases = models.CharField(max_length=120)
     discription = models.CharField(max_length=1000, null=True)
-    patient = models.ForeignKey(
-        Patient, related_name='past_diseases', on_delete=models.CASCADE)
+    patient = models.ForeignKey(Patient, related_name='past_diseases', on_delete=models.CASCADE)
 
+    def save(self, *args, **kwargs):
+        if self.id is None:
+            super(PastDiseases, self).save(*args, **kwargs)
 
-# class PastDiseases(models.Model):
-#     pastDiseases = models.CharField(max_length=120)
-#     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
 
 
 class Other(models.Model):
@@ -227,26 +215,15 @@ class Other(models.Model):
 class Addictions(models.Model):
     id = models.AutoField(primary_key=True)
     addiction = models.CharField(max_length=120, null=True)
-    patient = models.ForeignKey(
-        Patient, related_name='adictions', on_delete=models.CASCADE)
+    current = models.BooleanField(default=True)
+    patient = models.ForeignKey(Patient, related_name='addictions', on_delete=models.CASCADE)
 
-
-# class Medicines(models.Model):
-#     id = models.AutoField(primary_key=True)
-#     name = models.CharField(max_length=120, null=True)
-#     other_info = models.CharField(
-#         max_length=120, null=True)  # like power of medicine
-#     start_date = models.DateField(
-#         auto_now=False, auto_now_add=False, null=True)
-#     end_date = models.DateField(auto_now=False, auto_now_add=False, null=True)
-#     patient = models.ForeignKey(
-#         Patient, related_name='medicines', on_delete=models.CASCADE)
 
 
 class Weight(models.Model):
     id = models.AutoField(primary_key=True)
     weight = models.DecimalField(max_digits=5, decimal_places=2)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField()
     patient = models.ForeignKey(
         Patient, related_name='weight', on_delete=models.CASCADE)
 
@@ -258,7 +235,7 @@ class Weight(models.Model):
 class Height(models.Model):
     id = models.AutoField(primary_key=True)
     height = models.DecimalField(max_digits=5, decimal_places=2)
-    date = models.DateField(auto_now_add=True, auto_now=False)
+    date = models.DateField()
     patient = models.ForeignKey(
         Patient, related_name='height', on_delete=models.CASCADE)
 
@@ -271,7 +248,7 @@ class Cholesterol(models.Model):
     id = models.AutoField(primary_key=True)
     HDL = models.DecimalField(max_digits=5, decimal_places=2)
     LDL = models.DecimalField(max_digits=5, decimal_places=2)
-    date = models.DateField(auto_now_add=True, auto_now=False)
+    date = models.DateField()
     patient = models.ForeignKey(
         Patient, related_name='cholesterol', on_delete=models.CASCADE)
 
@@ -284,7 +261,7 @@ class BloodPressure(models.Model):
     id = models.AutoField(primary_key=True)
     systolic = models.DecimalField(max_digits=5, decimal_places=2)
     diastolic = models.DecimalField(max_digits=5, decimal_places=2)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField()
     patient = models.ForeignKey(
         Patient, related_name='blood_pressure', on_delete=models.CASCADE)
 
@@ -297,7 +274,7 @@ class Glocose(models.Model):
     id = models.AutoField(primary_key=True)
     pre_meal = models.DecimalField(max_digits=4, decimal_places=2)
     post_meal = models.DecimalField(max_digits=4, decimal_places=2)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField()
     patient = models.ForeignKey(
         Patient, related_name='glocose', on_delete=models.CASCADE)
 
@@ -314,21 +291,11 @@ class Rating(models.Model):
         Doctor, related_name='rating', on_delete=models.CASCADE)
     rating = models.IntegerField(null=True)
     review = models.CharField(max_length=1000, null=True)
-    date = models.DateField(auto_now_add=True, auto_now=False, null=True)
+    date = models.DateField(auto_now=False)
 
     class Meta:
         unique_together = [['doctor', 'patient']]
 
-
-# class DoctorNotAvailable(models.Model):
-#     id = models.AutoField(primary_key=True)
-#     doctor = models.ForeignKey(
-#         Doctor, related_name='doctor_not_available', on_delete=models.CASCADE)
-#     time_start = models.DateTimeField(
-#         auto_now=False, auto_now_add=False, null=True)
-#     time_end = models.DateTimeField(
-#         auto_now=False, auto_now_add=False, null=True)
-#     reason = models.CharField(max_length=1000, null=True)
 
 class Break(models.Model):
     REPEAT_CHOICE = (
