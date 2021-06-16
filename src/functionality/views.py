@@ -9,366 +9,435 @@ from accounts.serializers import WeightSerializer
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST
 from accounts.serializers import *
-from healthware.CustomPermissions import IsAuthDoctor, IsPatient,IsDoctor,IsActive
+from healthware.CustomPermissions import IsAuthDoctor, IsPatient, IsDoctor, IsActive
+import accounts.models as mo
 # Create your views here.
+
 
 def create_BMI_graph(patient):
     pass
 
+
 def create_cholesterol_graph(patient):
     pass
 
+
 def create_blood_pressure_graph(patient):
     pass
+
 
 def create_glocose_graph(patient):
     pass
 
 
-class AddWeight(CreateAPIView):
-    permission_classes=[IsAuthenticated,IsPatient,IsActive]
-    serializer_class=WeightSerializer
+class Weight(APIView):
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = WeightSerializer
+
     def post(self, request, *args, **kwargs):
-        serializer=WeightSerializer(data=request.data, context={'request':request}
-                                    , exclude=['id','patient'])
+        serializer = WeightSerializer(data=request.data, context={
+                                      'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            create_BMI_graph(patient = request.user.person.patient)
+            create_BMI_graph(patient=request.user.person.patient)
 
-            return Response(serializer.validated_data,status=HTTP_201_CREATED);
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors,status=HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk=None, *args, **kwargs):
+        weight = mo.Weight.objects.get(pk=pk)
+        weight.delete()
+        return Response({"djsfckjx": "kjslckml"}, status=HTTP_400_BAD_REQUEST)
 
 
-class Weight(APIView):
-    permission_classes=[IsAuthenticated,IsAuthDoctor|IsPatient,IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
+class GetWeight(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
             try:
-                queryset=request.user.person.patient.weight.all()
-                serializer=WeightSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
+                queryset = request.user.person.patient.weight.all()
+                serializer = WeightSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
             except Exception as e:
                 print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
         else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
-
-
-class AddHeight(CreateAPIView):
-    permission_classes=[IsAuthenticated,IsPatient,IsActive]
-    serializer_class=HeightSerializer
-    def post(self, request, *args, **kwargs):
-        serializer=HeightSerializer(data=request.data, context={'request':request}, exclude=['id','patient'])
-        if serializer.is_valid():
-            serializer.save()
-            create_BMI_graph(patient = request.user.person.patient)
-            return Response(serializer.validated_data,status=HTTP_201_CREATED);
-        else:
-            return Response(serializer.errors,status=HTTP_400_BAD_REQUEST);
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
 
 
 class Height(APIView):
-    permission_classes=[IsAuthenticated,IsAuthDoctor|IsPatient,IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.height.all()
-                serializer=HeightSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = HeightSerializer
 
-
-class AddCholesterol(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=CholesterolSerializer
     def post(self, request, *args, **kwargs):
-        serializer=CholesterolSerializer(data=request.data, context={'request':request}, exclude=['id','patient'])
+        serializer = HeightSerializer(data=request.data, context={
+                                      'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            create_cholesterol_graph(patient = request.user.person.patient)
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            create_BMI_graph(patient=request.user.person.patient)
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetHeight(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.patient.height.all()
+                serializer = HeightSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
 
 
 class Cholesterol(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.cholesterol.all()
-                serializer=CholesterolSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
-    
-        
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = CholesterolSerializer
 
-class AddBloodPressure(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=BloodPressureSerializer
     def post(self, request, *args, **kwargs):
-        serializer=BloodPressureSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
+        serializer = CholesterolSerializer(data=request.data, context={
+                                           'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            create_blood_pressure_graph(patient= request.user.person.patient)
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            create_cholesterol_graph(patient=request.user.person.patient)
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetCholesterol(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.patient.cholesterol.all()
+                serializer = CholesterolSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
+
 
 class BloodPressure(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.blood_pressure.all()
-                serializer=BloodPressureSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = BloodPressureSerializer
 
-
-class AddBloodPressure(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=BloodPressureSerializer
     def post(self, request, *args, **kwargs):
-        serializer=BloodPressureSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
+        serializer = BloodPressureSerializer(data=request.data, context={
+                                             'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            create_blood_pressure_graph(patient= request.user.person.patient)
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            create_blood_pressure_graph(patient=request.user.person.patient)
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetBloodPressure(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.patient.blood_pressure.all()
+                serializer = BloodPressureSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
+
 
 class BloodPressure(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.blood_pressure.all()
-                serializer=BloodPressureSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = BloodPressureSerializer
 
-class AddGlocose(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=GlocoseSerializer
     def post(self, request, *args, **kwargs):
-        serializer=GlocoseSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
+        serializer = BloodPressureSerializer(data=request.data, context={
+                                             'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            create_glocose_graph(patient= request.user.person.patient)
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            create_blood_pressure_graph(patient=request.user.person.patient)
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetBloodPressure(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.patient.blood_pressure.all()
+                serializer = BloodPressureSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
+
 
 class Glocose(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.glocose.all()
-                serializer=GlocoseSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = GlocoseSerializer
 
-class AddAddictions(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=AddictionsSerializer
     def post(self, request, *args, **kwargs):
-        serializer=AddictionsSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
+        serializer = GlocoseSerializer(data=request.data, context={
+                                       'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            create_glocose_graph(patient=request.user.person.patient)
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetGlocose(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.patient.glocose.all()
+                serializer = GlocoseSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
+
 
 class Addictions(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.addictions.all()
-                serializer=AddictionsSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = AddictionsSerializer
 
-class AddPastDiseases(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=PastDiseasesSerializer
     def post(self, request, *args, **kwargs):
-        serializer=PastDiseasesSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
+        serializer = AddictionsSerializer(data=request.data, context={
+                                          'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetAddictions(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.patient.addictions.all()
+                serializer = AddictionsSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
+
 
 class PastDiseases(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = PastDiseasesSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = PastDiseasesSerializer(data=request.data, context={
+                                            'request': request}, exclude=['id', 'patient'])
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetPastDiseases(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
             try:
-                queryset=request.user.person.patient.past_diseases.all()
-                serializer=PastDiseasesSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
+                queryset = request.user.person.patient.past_diseases.all()
+                serializer = PastDiseasesSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
             except Exception as e:
                 print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
         else:
-            responce=dict(Error='Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
 
-
-class AddAllergies(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=AllergiesSerializer
-    def post(self, request, *args, **kwargs):
-        serializer=AllergiesSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
-        if serializer.is_valid():
-            serializer.save();
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
-        else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
 
 class Allergies(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = AllergiesSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = AllergiesSerializer(data=request.data, context={
+                                         'request': request}, exclude=['id', 'patient'])
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetAllergies(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
             try:
-                queryset=request.user.person.patient.allergies.all()
-                serializer=AllergiesSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
+                queryset = request.user.person.patient.allergies.all()
+                serializer = AllergiesSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
             except Exception as e:
                 print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
         else:
-            responce=dict(Error= 'Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
 
 # add_emergency_contact/', AddEmergencyContact
-class AddEmergencyContact(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=EmergencyContactSerializer
-    def post(self, request, *args, **kwargs):
-        serializer=EmergencyContactSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
-        if serializer.is_valid():
-            serializer.save();
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
-        else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+
 
 class EmergencyContact(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = EmergencyContactSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = EmergencyContactSerializer(
+            data=request.data, context={'request': request}, exclude=['id', 'patient'])
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetEmergencyContact(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
             try:
-                queryset=request.user.person.patient.emergency_contact.all()
-                serializer=EmergencyContactSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
+                queryset = request.user.person.patient.emergency_contact.all()
+                serializer = EmergencyContactSerializer(
+                    queryset, context={'request': request}, exclude=['patient'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
             except Exception as e:
                 print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
         else:
-            responce=dict(Error= 'Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
 
-#'add_phone/', AddPhone.as_view()),
-class AddPhone(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=PhoneSerializer
-    def post(self, request, *args, **kwargs):
-        serializer=PhoneSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
-        if serializer.is_valid():
-            serializer.save();
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
-        else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+# 'add_phone/', AddPhone.as_view()),
+
 
 class Phone(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
-            try:
-                queryset=request.user.person.patient.phone.all()
-                serializer=PhoneSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
-            except Exception as e:
-                print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
-        else:
-            responce=dict(Error= 'Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = PhoneSerializer
 
-
-
-#'add_address/', AddAddress.as_view()),
-class AddAddress(CreateAPIView):
-    permission_classes= [IsAuthenticated, IsPatient, IsActive]
-    serializer_class=AddressSerializer
     def post(self, request, *args, **kwargs):
-        serializer=AddressSerializer(data=request.data, context={'request': request}, exclude=['id','patient'])
+        serializer = PhoneSerializer(data=request.data, context={
+                                     'request': request}, exclude=['id', 'person'])
         if serializer.is_valid():
-            serializer.save();
-            return Response(serializer.validated_data, status=HTTP_201_CREATED);
+            serializer.save()
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= HTTP_400_BAD_REQUEST);
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
-class Address(APIView):
-    permission_classes=[IsAuthenticated, IsAuthDoctor|IsPatient, IsActive];
-    def get(self,request,*args,**kwargs):
-        if request.user.user_type=='P':
+
+class GetPhone(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
             try:
-                queryset=request.user.person.patient.address.all()
-                serializer=AddressSerializer(queryset, context={'request':request}, exclude=['patient'], many=True)
-                return Response(serializer.data, HTTP_200_OK);
+                queryset = request.user.person.phone.all()
+                serializer = PhoneSerializer(
+                    queryset, context={'request': request}, exclude=['person'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
             except Exception as e:
                 print(e)
-                responce=dict(Error=str(e))
-                return Response(responce, HTTP_404_NOT_FOUND);
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
         else:
-            responce=dict(Error= 'Wrong user data requested');
-            return Response(responce, HTTP_404_NOT_FOUND);
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)
 
 
+# 'add_address/', AddAddress.as_view()),
+class Address(APIView):
+    permission_classes = [IsAuthenticated, IsPatient, IsActive]
+    serializer_class = AddressSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = AddressSerializer(data=request.data, context={
+                                       'request': request}, exclude=['id', 'person'])
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.validated_data, status=HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class GetAddress(APIView):
+    permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            try:
+                queryset = request.user.person.address.all()
+                serializer = AddressSerializer(
+                    queryset, context={'request': request}, exclude=['person'], many=True)
+                return Response(serializer.data, HTTP_200_OK)
+            except Exception as e:
+                print(e)
+                responce = dict(Error=str(e))
+                return Response(responce, HTTP_404_NOT_FOUND)
+        else:
+            responce = dict(Error='Wrong user data requested')
+            return Response(responce, HTTP_404_NOT_FOUND)

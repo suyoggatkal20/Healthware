@@ -165,7 +165,7 @@ class CreatePatient(GenericAPIView, CreateModelMixin):
     serializer_class = CreatePatientSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data= request.data)
         if(serializer.is_valid()):
             data = serializer.validated_data.copy()
             print("valid", data)
@@ -179,8 +179,6 @@ class CreatePatient(GenericAPIView, CreateModelMixin):
             return Response(data=serializer.validated_data, status=HTTP_201_CREATED)
         print("Invalid", serializer.errors)
         return Response(serializer.errors, status=HTTP_201_CREATED)
-
-
 class VerifyEmail(APIView):
     permission_classes = [AllowAny, ]
 

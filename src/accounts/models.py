@@ -177,7 +177,7 @@ class EmergencyContact(models.Model):
     country_code = models.CharField(max_length=3, default="+91")
     phone_no = models.CharField(max_length=120)
     relation = models.CharField(max_length=120, null=True)
-    person = models.ForeignKey(
+    patient = models.ForeignKey(
         Patient, related_name='emergency_contact', on_delete=models.CASCADE)
 
 

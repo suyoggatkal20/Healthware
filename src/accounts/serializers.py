@@ -84,8 +84,8 @@ class AddressSerializer(DynamicFieldsModelSerializer):
         model = Address
         fields = '__all__'
     def create(self, data):
-        patient = self.context['request'].user.person.patient
-        addictions = Addictions.objects.create(patient=patient, **data)
+        person = self.context['request'].user.person
+        addictions = Address.objects.create(person=person, **data)
         addictions.save()
         return addictions;
 
@@ -96,8 +96,8 @@ class PhoneSerializer(DynamicFieldsModelSerializer):
         fields = '__all__'
         extra_kwargs = {'country_code': {'required': False}}
     def create(self, data):
-        patient = self.context['request'].user.person.patient
-        phone_serializer = PhoneSerializer.objects.create(patient=patient, **data)
+        person = self.context['request'].user.person
+        phone_serializer = Phone.objects.create(person=person, **data)
         phone_serializer.save()
         return phone_serializer;
 
@@ -253,10 +253,7 @@ class RatingSerializer(DynamicFieldsModelSerializer):
         fields = '__all__'
 
 
-# class AppointmentSerializer(DynamicFieldsModelSerializer):
-#     class Meta:
-#         model = Appointment
-#         fields = '__all__'
+
 
 
 class PrescriptionSerializer(DynamicFieldsModelSerializer):
@@ -323,14 +320,21 @@ class CreateDoctorSerializer(Serializer):
     password = serializers.CharField(max_length=20)
     country_code = serializers.CharField(max_length=4, required=False)
     phone = serializers.CharField(max_length=12)
+    doctor=DoctorSerializer(exclude=['media', 'id', 'user','is_vc_available','call_active'])
 
     # address  CreateDoctorSerializer() from accounts.serializers import *;
     address = AddressSerializer(many=True, exclude=['person', 'id'])
 
     def create(self, data):
         with atomic():
-            user = User.objects.create_user(email=data['email'],
+            if data['country_code']:
+                user = User.objects.create_user(email=data['email'],
                                             country_code=data['country_code'],
+                                            phone=data['phone'],
+                                            user_type='D',
+                                            password=data['password'],)
+            else:
+                user = User.objects.create_user(email=data['email'],
                                             phone=data['phone'],
                                             user_type='D',
                                             password=data['password'],)
@@ -341,6 +345,7 @@ class CreateDoctorSerializer(Serializer):
             doctor.save()
             email = Email(email=data['email'], person=doctor)
             email.save()
+            
             if data['country_code']:
                 phone = Phone(
                     country_code=data['country_code'], phone=data['phone'], person=doctor)
@@ -369,7 +374,7 @@ class CreatePatientSerializer(Serializer):
         exclude=['person', 'id'], many=True, required=False)
 
     emergency_contact = EmergencyContactSerializer(
-        exclude=['person', "id"], many=True, required=False)
+        exclude=['patient', "id"], many=True, required=False)
 
     allergies = AllergiesSerializer(
         exclude=['patient', "id"], many=True, required=False)
@@ -397,10 +402,16 @@ class CreatePatientSerializer(Serializer):
 
     def create(self, data):
         with atomic():
-            user = User.objects.create_user(email=data['email'],
+            if data['country_code']:
+                user = User.objects.create_user(email=data['email'],
                                             country_code=data['country_code'],
                                             phone=data['phone'],
-                                            user_type='P',
+                                            user_type='D',
+                                            password=data['password'],)
+            else:
+                user = User.objects.create_user(email=data['email'],
+                                            phone=data['phone'],
+                                            user_type='D',
                                             password=data['password'],)
             user.save()
             rand = (''.join(choice(ascii_uppercase) for i in range(30)))
@@ -417,7 +428,7 @@ class CreatePatientSerializer(Serializer):
                 phone = Phone.objects.create(
                     phone=data['phone'], person=patient).save()
             create_many(Address, data.get("address", None), person=patient)
-            create_many(EmergencyContact, data.get("emergency_contact", None), person=patient)
+            create_many(EmergencyContact, data.get("emergency_contact", None), patient=patient)
             create_many(Allergies, data.get("allergies", None), patient=patient)
             create_many(PastDiseases, data.get("past_diseases", None), patient=patient)
             create_many(Addictions, data.get("addictions", None), patient=patient)
