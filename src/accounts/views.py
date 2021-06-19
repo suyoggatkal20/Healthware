@@ -1,9 +1,11 @@
 from django.http import response
 from django.shortcuts import render
 from django.contrib.auth.decorators import permission_required
+from prescription.models import MedicineDetails, Prescription
+from prescription.serializers import MedicineDetailsSerializer, PrescriptionSerializer
 from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework.views import APIView
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, RetrieveAPIView
 from rest_framework.mixins import CreateModelMixin
 from django.http.response import HttpResponse, JsonResponse
 from accounts.models import *
@@ -19,7 +21,8 @@ from django_email_verification import send_email
 
 from string import ascii_uppercase
 from random import choice
-
+from healthware.CustomPermissions import IsActive, IsAuthDoctor,IsDoctor,IsPatient
+from itertools import chain
 # Create your views here.
 
 
@@ -30,9 +33,9 @@ class UserViewSet(ModelViewSet):
 
 class PersonViewSet(ModelViewSet):
     #permission_classes = [IsAuthenticated]
+
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
-
 
 class PatientViewSet(ModelViewSet):
     queryset = Patient.objects.all()
@@ -158,8 +161,8 @@ class CreateDoctor(GenericAPIView, CreateModelMixin):
 
 
 class CreatePatient(GenericAPIView, CreateModelMixin):
-    # >>> from accounts.serializers import *
-    # >>> CreatePatientSerializer()
+    # from accounts.serializers import *
+    # CreatePatientSerializer()
 
     permission_classes = [AllowAny, ]
     serializer_class = CreatePatientSerializer
@@ -199,3 +202,52 @@ class VerifyEmail(APIView):
             responce = dict()
             responce['Error'] = "Please specify email"
             return Response(responce, status=HTTP_404_NOT_FOUND)
+
+class IsEmailAvailable(APIView):
+    permission_classes = [AllowAny, ]
+    def get(self, request, *args, **kwargs):
+        try:
+            print(request.data['email'])
+            email=User.objects.get(email=request.data['email']);
+            return Response({'Error':'Email already Exist'},status=HTTP_409_CONFLICT);
+        except:
+            return Response(status=HTTP_200_OK)
+
+class GetPatientAll(APIView):
+    permission_classes=[IsAuthenticated, IsPatient, IsActive];
+    serializer_class=GetPatientAllSerializer
+    def get(self, request, *args, **kwargs):
+        patient:Patient=Patient.objects.get(user=request.user);
+        address = Address.objects.filter(person=patient)
+
+
+        emergency_contact = EmergencyContact.objects.filter(patient=patient)
+
+        allergies = Allergies.objects.filter(patient=patient)
+
+        past_diseases = PastDiseases.objects.filter(patient=patient)
+
+        addictions = Addictions.objects.filter(patient=patient)
+
+        weight = Weight.objects.filter(patient=patient)
+
+        height = Height.objects.filter(patient=patient)
+
+        cholesterol = Cholesterol.objects.filter(patient=patient)
+
+        blood_pressure = BloodPressure.objects.filter(patient=patient)
+
+        glocose = Glocose.objects.filter(patient=patient)
+        qs={"user":request.user,"patient":patient,"address":address,'emergency_contact':emergency_contact,'allergies':allergies,'past_diseases':past_diseases,'addictions':addictions,'weight':weight,'height':height,'cholesterol':cholesterol,'blood_pressure':blood_pressure,'glocose':glocose,'age':patient.age()}
+        serializer=self.serializer_class(qs)
+        return Response(serializer.data,HTTP_200_OK);
+
+class GetDoctorAll(APIView):
+    permission_classes=[IsAuthenticated, IsDoctor, IsActive];
+    serializer_class=GetDoctorAllSerializer
+    def get(self, request, *args, **kwargs):
+        doctor:Doctor=Doctor.objects.get(user=request.user);
+        address = Address.objects.filter(person=doctor)
+        qs={"user":request.user,"doctor":doctor,"address":address,"age":doctor.age(),'experience':doctor.experience()}
+        serializer=self.serializer_class(qs)
+        return Response(serializer.data,HTTP_200_OK);

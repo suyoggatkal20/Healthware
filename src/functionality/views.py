@@ -17,18 +17,14 @@ import accounts.models as mo
 def create_BMI_graph(patient):
     pass
 
-
 def create_cholesterol_graph(patient):
     pass
-
 
 def create_blood_pressure_graph(patient):
     pass
 
-
 def create_glocose_graph(patient):
     pass
-
 
 class Weight(APIView):
     permission_classes = [IsAuthenticated, IsPatient, IsActive]
@@ -36,11 +32,10 @@ class Weight(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = WeightSerializer(data=request.data, context={
-                                      'request': request}, exclude=['id', 'patient'])
+                                    'request': request}, exclude=['id', 'patient'])
         if serializer.is_valid():
             serializer.save()
             create_BMI_graph(patient=request.user.person.patient)
-
             return Response(serializer.validated_data, status=HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)

@@ -6,7 +6,8 @@
     "djangointellisense.settingsModule": "${workspaceFolder}/src/healthware/settings.py",
     "python.analysis.extraPaths": [
         "${workspaceFolder}",
-        "${workspaceFolder}/src",
+        "${workspaceFolder}/src/",
+        "${workspaceFolder}/Lib/site-packages"
     ],
     "files.exclude": {
         "**/.git": true,

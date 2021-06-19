@@ -5,6 +5,8 @@ from rest_framework.routers import DefaultRouter
 from accounts.views import *
 from accounts.views import Abc
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+
 router = DefaultRouter()
 router.register('User', UserViewSet, 'User')
 router.register('Person', PersonViewSet, 'Person')
@@ -38,6 +40,7 @@ urlpatterns = [
     path('create_doctor/', CreateDoctor.as_view()),
     path('create_patient/', CreatePatient.as_view()),
     path('VerifyEmail/', VerifyEmail.as_view()),
-    
-    
+    path('isEmailAvailable/', IsEmailAvailable.as_view()),
+    path('get_patient_all/', GetPatientAll.as_view()), 
+    path('get_doctor_all/', GetDoctorAll.as_view()),
 ]

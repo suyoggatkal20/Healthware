@@ -20,11 +20,18 @@ from accounts import urls as acc_url
 from functionality import urls as fun_url
 from django_email_verification import urls as email_urls
 from appointment import urls as appo_urls
+from calling import urls as call_urls
+from django.conf import settings
+from django.conf.urls.static import static
+from prescription import urls as pre_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('account/', include(acc_url)),
     path('functionality/', include(fun_url)),
     path('appointment/', include(appo_urls)),
+    path('calling/', include(call_urls)),
     path('email/', include(email_urls)),
-]
+    path('prescription/', include(pre_urls)),
+
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

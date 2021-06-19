@@ -86,7 +86,16 @@ class Person(models.Model):
     dob = models.DateField()
     gender = models.CharField(max_length=2, choices=GENDER_CHOICES, null=True)
     media = models.CharField(max_length=150, null=True)
-
+    def age(self):
+        today=datetime.date.today()
+        try:
+            birthday=self.dob.replace(year=today.year)
+        except ValueError:
+            birthday=self.dob.replace(day=self.dob.day-1,year=today.year)
+        if birthday>today:
+            return today.year-self.dob.year-1;
+        else:
+            return today.year-self.dob.year;
     def __str__(self):
         return self.first_name+" "+self.last_name
 
@@ -123,25 +132,34 @@ class Patient(Person):
     def __str__(self):
         return super().__str__()+' Patient'
 
-
+def get_profile_name(instance,filename):
+    return 'doct_profile : '+instance.id
 class Doctor(Person):
     speciality = models.CharField(max_length=120)
     degree = models.CharField(max_length=50, verbose_name=_('Degree'))
-    appoinment_duration = models.DurationField(
-        verbose_name=_('appointment duration'))
-    practice_started = models.DateField(
-        verbose_name=_('Practice started Date'))
-    start_time = models.TimeField(verbose_name=_(
-        'clinic open time'))
+    appoinment_duration = models.DurationField(verbose_name=_('appointment duration'))
+    practice_started = models.DateField(verbose_name=_('Practice started Date'))
+    start_time = models.TimeField(verbose_name=_('clinic open time'))
     end_time = models.TimeField(verbose_name=_('clinic close time'))
-    is_vc_available = models.BooleanField(
-        default=False, verbose_name=_('Available for Video Calling'))
-    call_active = models.BooleanField(
-        default=False, verbose_name=_('Video call is going on'))
-    charge_per_app = models.DecimalField(
-        max_digits=6, decimal_places=2, default=300, verbose_name=_('Charge per appointment'))
-    charge_per_vc = models.DecimalField(
-        max_digits=6, decimal_places=2, default=200, verbose_name=_('Charge per video calling'))
+    is_vc_available = models.BooleanField(default=False, verbose_name=_('Available for Video Calling'))
+    call_active = models.BooleanField(default=False, verbose_name=_('Video call is going on'))
+    charge_per_app = models.DecimalField(max_digits=6, decimal_places=2, default=300, verbose_name=_('Charge per appointment'))
+    charge_per_vc = models.DecimalField(max_digits=6, decimal_places=2, default=200, verbose_name=_('Charge per video calling'))
+    profile=models.ImageField(upload_to=get_profile_name,default='default_profile.jpg')
+    fcm_token=models.CharField(max_length=700)
+
+
+    
+    def experience(self)->int:
+        today=datetime.date.today()
+        try:
+            day=self.dob.replace(year=today.year)
+        except ValueError:
+            day=self.dob.replace(day=self.dob.day-1,year=today.year)
+        if day>today:
+            return today.year-self.practice_started.year-1;
+        else:
+            return today.year-self.practice_started.year;
 
     def __str__(self):
         return super().__str__()+'Doctor'
@@ -151,18 +169,14 @@ class Address(models.Model):
     id = models.AutoField(primary_key=True)
     house_no = models.CharField(max_length=100, default=None, verbose_name=_(
         'House Number/ Flat Number'), null=True)
-    locality = models.CharField(
-        max_length=100, verbose_name=_('locality'), default=None, null=True)
+    locality = models.CharField(max_length=100, verbose_name=_('locality'), default=None, null=True)
     district = models.CharField(max_length=50, default=None, null=True)
     state = models.CharField(max_length=50, default=None, null=True)
     country = models.CharField(max_length=50, default=None, null=True)
     pincode = models.CharField(max_length=50, default=None, null=True)
-    latitude = models.DecimalField(
-        max_digits=10, decimal_places=7, default=None, null=True)
-    longitude = models.DecimalField(
-        max_digits=10, decimal_places=7, default=None, null=True)
-    person = models.ForeignKey(
-        Person, related_name='address', on_delete=models.CASCADE)
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, default=None, null=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, default=None, null=True)
+    person = models.ForeignKey(Person, related_name='address', on_delete=models.CASCADE)
 
 
 class Phone(models.Model):
@@ -317,27 +331,7 @@ class Break(models.Model):
     repeat = models.CharField(max_length=1, choices=REPEAT_CHOICE, null=False)
 
 
-class Prescription(models.Model):
-    id = models.AutoField(primary_key=True)
-    patient = models.ForeignKey(
-        Patient, related_name='prescreption', on_delete=models.CASCADE)
-    doctor = models.ForeignKey(Doctor, related_name='prescreption',
-                               on_delete=models.CASCADE, null=True)
-    time = models.DateTimeField(null=True)
-    signature = models.CharField(max_length=500, null=True)
 
-
-class MedicineDetails(models.Model):
-    REPEAT_CHOICE = (
-        (u'D1', u'Daily Once'),
-        (u'D2', u'Daily Twice'),
-        (u'D3', u'Daily Trice'),
-        (u'W1', u'Weakly Once'),
-    )
-    id = models.AutoField(primary_key=True)
-    prescription = models.ForeignKey(
-        Prescription, related_name='medicin_schedule', on_delete=models.CASCADE)
-    repeat = models.CharField(max_length=2, choices=REPEAT_CHOICE, null=False)
-    is_pre_meal = models.BooleanField(default=False)
-    dose = models.CharField(max_length=500, verbose_name=_(
-        'Details about each medicine and Dose'))
+class Granted(models.Model):
+    asking_user=models.ForeignKey(User, related_name='granted_asking', on_delete=models.CASCADE)
+    granting_user=models.ForeignKey(User, related_name='granted_granting', on_delete=models.CASCADE)
