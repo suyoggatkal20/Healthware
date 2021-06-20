@@ -105,8 +105,8 @@ class Call(APIView):
         if not firebase_admin._apps:
             firebase_admin.initialize_app()
         try:
-            pk = int(request.data['pk'])
-            doctor:Doctor=Doctor.objects.get(user=User.objects.get(pk=pk));
+            doct_user_id = int(request.data['doctor_id'])
+            doctor:Doctor=Doctor.objects.get(user=User.objects.get(pk=doct_user_id));
             patient:Patient=Patient.objects.get(user=request.user);
             doctorSerializer = DoctorSerializer(doctor);
         except:
@@ -123,7 +123,7 @@ class Call(APIView):
             return Response(data=data,status=HTTP_404_NOT_FOUND)
         #registration_token = doctor.data['token']
         fcm_token=doctor.fcm_token;
-        doctor_tocken=getToken(pk)
+        doctor_tocken=getToken(doct_user_id)
         patient_tocken=getToken(request.user.id)
         print(doctor_tocken, patient_tocken)
         message = messaging.Message(
@@ -138,7 +138,11 @@ class Call(APIView):
         
         # APP ID b77289b8a5024ba9ad55ffa686e3af1b
         # App Certificate e0b9a9f54c084e2fa499d037fe23cef6
-        response = messaging.send(message)
+        try:
+            response = messaging.send(message)
+        except:
+            response=None
+            print('coudnt send message')
         active_calls=ActiveCall.objects.filter(patient=patient)
         for active_call in active_calls:
             call_log=CallLogs.objects.create(patient=active_call.patient,doctor=active_call.doctor,start_time=active_call.start_time)
@@ -147,7 +151,7 @@ class Call(APIView):
         doctor.call_active=True
         doctor.save()
         a=ActiveCall.objects.create(doctor=doctor,patient=patient)
-        print('Successfully sent message:', response)
+        print('Successfully sent message if not None :', response)
         return Response(data=patient_tocken,status=HTTP_200_OK)
 
 class DoctCallEnd(APIView):

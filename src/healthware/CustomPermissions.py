@@ -1,6 +1,8 @@
+from datetime import datetime
 from accounts.models import Person,User
 from rest_framework.permissions import BasePermission
 from accounts.models import Granted
+from django.db.models import F
 
 class IsPatient(BasePermission):
     def has_permission(self, request, view):
@@ -26,8 +28,12 @@ class IsAuthDoctor(BasePermission):
         granting_user:User=User.objects.get(pk=pk)
         print(granting_user,asking_user)
         if asking_user.user_type!='D' or granting_user.user_type!='P':
+            print('bhdsb1')
             return False;
-        return (request.user.is_superuser and request.user.is_staff) or (Granted.objects.filter(asking_user=asking_user,granting_user=granting_user).exists());
+        print(())
+        grants=Granted.objects.filter(asking_user=asking_user,granting_user=granting_user)
+        grants=grants.filter(duration__gte=datetime.today-F('granted_at'))
+        return (request.user.is_superuser and request.user.is_staff) or grants.exists();
 class IsActive(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_active;

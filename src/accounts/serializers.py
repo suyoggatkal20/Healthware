@@ -517,3 +517,8 @@ def create_many(model, obj_list, **kwargs):
             model.objects.create(**kwargs, **obj).save()
     else:
         model.objects.create(**kwargs, **obj_list).save()
+
+class GrantedSerializer(DynamicFieldsModelSerializer):
+    class Meta:
+        model=Granted
+        fields='__all__'

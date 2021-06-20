@@ -2,14 +2,18 @@ from django.db import models
 from accounts.models import Patient, Doctor
 from django.utils.translation import gettext_lazy as _
 # Create your models here.
+
+
 class Prescription(models.Model):
     id = models.AutoField(primary_key=True)
     patient = models.ForeignKey(
         Patient, related_name='prescreption', on_delete=models.CASCADE)
     doctor = models.ForeignKey(Doctor, related_name='prescreption',
                                on_delete=models.CASCADE, null=True)
-    time = models.DateTimeField(auto_now_add=True,null=True)
+    time = models.DateTimeField(auto_now_add=True)
+    #last_dose = models.DateTimeField()
     signature = models.CharField(max_length=500, null=True)
+
 
 class MedicineDetails(models.Model):
     REPEAT_CHOICE = (
@@ -23,5 +27,6 @@ class MedicineDetails(models.Model):
         Prescription, related_name='medicine_details', on_delete=models.CASCADE)
     repeat = models.CharField(max_length=2, choices=REPEAT_CHOICE, null=False)
     is_pre_meal = models.BooleanField(default=False)
+    total_dose=models.IntegerField()
     dose = models.CharField(max_length=500, verbose_name=_(
         'Details about each medicine and Dose'))

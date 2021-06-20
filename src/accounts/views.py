@@ -13,7 +13,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from accounts.serializers import *
 
 from rest_framework.response import Response
-from rest_framework.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST, HTTP_200_OK, HTTP_409_CONFLICT
+from rest_framework.status import HTTP_201_CREATED, HTTP_208_ALREADY_REPORTED, HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST, HTTP_200_OK, HTTP_409_CONFLICT
 
 from django.db.transaction import atomic
 
@@ -155,7 +155,7 @@ class CreateDoctor(GenericAPIView, CreateModelMixin):
             except Exception as e:
                 return Response([{'Error': str(e)}], status=HTTP_409_CONFLICT)
             send_email(doctor.user)
-            return Response(data=serializer.validated_data, status=HTTP_201_CREATED)
+            return Response(status=HTTP_201_CREATED)
         print("Invalid", serializer.errors)
         return Response(serializer.errors, status=HTTP_201_CREATED)
 
@@ -251,3 +251,28 @@ class GetDoctorAll(APIView):
         qs={"user":request.user,"doctor":doctor,"address":address,"age":doctor.age(),'experience':doctor.experience()}
         serializer=self.serializer_class(qs)
         return Response(serializer.data,HTTP_200_OK);
+
+class Grant(APIView):
+    permission_classes=[IsAuthenticated, IsDoctor|IsPatient, IsActive]
+    def post(self, request, *args, **kwargs):
+        serializer=GrantedSerializer
+
+class CallingState(APIView):
+    permission_classes=[IsAuthenticated,IsDoctor,IsActive]
+    def get(self, request,*args,**kwargs):
+        status:str=request.GET.get('state')
+        if status.lower()=='on':
+            status=True
+        elif status.lower()=='off':
+            status=False
+        else:
+            return Response({'Error': 'invalid status in request parameter'},status=HTTP_400_BAD_REQUEST)
+        doctor:Doctor=Doctor.objects.get(user=request.user)
+        if doctor.is_vc_available==status:
+            return Response({'Error': 'Your current status is same as requested status'},status=HTTP_208_ALREADY_REPORTED)
+        doctor.is_vc_available=status
+        doctor.save()
+        return Response(status=HTTP_200_OK)
+        
+        
+        

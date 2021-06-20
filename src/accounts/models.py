@@ -4,6 +4,7 @@ from django.db import models
 # Create your models here.
 from django.db import models
 from django.db.models.fields import NullBooleanField
+from django.template.defaultfilters import date
 from django_countries.fields import CountryField
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -330,8 +331,8 @@ class Break(models.Model):
     reason = models.CharField(max_length=1000, null=True)
     repeat = models.CharField(max_length=1, choices=REPEAT_CHOICE, null=False)
 
-
-
 class Granted(models.Model):
     asking_user=models.ForeignKey(User, related_name='granted_asking', on_delete=models.CASCADE)
     granting_user=models.ForeignKey(User, related_name='granted_granting', on_delete=models.CASCADE)
+    granted_at=models.DateTimeField(auto_now_add=True)
+    duration=models.DurationField(default=datetime.timedelta(minutes=60))

@@ -12,10 +12,11 @@ from .models import Prescription, MedicineDetails
 class CreatePrescription(APIView):
     permission_classes = [IsAuthenticated, IsDoctor, IsAuthDoctor, IsActive]
     def post(self, request, *args, **kwargs):
-        serializer=PrescriptionSerializer(data=request.data,exclude=['id','time']);
+        serializer=PrescriptionSerializer(data=request.data,context={
+            'request': request
+        });
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.validated_data,status=HTTP_201_CREATED)
+            return Response(status=HTTP_201_CREATED)
         else:
             return Response(serializer.errors,HTTP_400_BAD_REQUEST)
-
