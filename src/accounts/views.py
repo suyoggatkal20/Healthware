@@ -144,7 +144,6 @@ class MedicineDetailsViewSet(ModelViewSet):
 class CreateDoctor(GenericAPIView, CreateModelMixin):
     permission_classes = [AllowAny, ]
     serializer_class = CreateDoctorSerializer
-
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if(serializer.is_valid()):
@@ -157,16 +156,14 @@ class CreateDoctor(GenericAPIView, CreateModelMixin):
             send_email(doctor.user)
             return Response(status=HTTP_201_CREATED)
         print("Invalid", serializer.errors)
-        return Response(serializer.errors, status=HTTP_201_CREATED)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
 
 class CreatePatient(GenericAPIView, CreateModelMixin):
     # from accounts.serializers import *
     # CreatePatientSerializer()
-
     permission_classes = [AllowAny, ]
     serializer_class = CreatePatientSerializer
-
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data= request.data)
         if(serializer.is_valid()):
@@ -181,7 +178,7 @@ class CreatePatient(GenericAPIView, CreateModelMixin):
             send_email(patient.user)
             return Response(data=serializer.validated_data, status=HTTP_201_CREATED)
         print("Invalid", serializer.errors)
-        return Response(serializer.errors, status=HTTP_201_CREATED)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 class VerifyEmail(APIView):
     permission_classes = [AllowAny, ]
 
@@ -205,7 +202,7 @@ class VerifyEmail(APIView):
 
 class IsEmailAvailable(APIView):
     permission_classes = [AllowAny, ]
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             print(request.data['email'])
             email=User.objects.get(email=request.data['email']);
@@ -220,7 +217,7 @@ class GetPatientAll(APIView):
         patient:Patient=Patient.objects.get(user=request.user);
         address = Address.objects.filter(person=patient)
 
-
+#http://{{server}}:8000/calling/getdoctors/
         emergency_contact = EmergencyContact.objects.filter(patient=patient)
 
         allergies = Allergies.objects.filter(patient=patient)
@@ -240,6 +237,7 @@ class GetPatientAll(APIView):
         glocose = Glocose.objects.filter(patient=patient)
         qs={"user":request.user,"patient":patient,"address":address,'emergency_contact':emergency_contact,'allergies':allergies,'past_diseases':past_diseases,'addictions':addictions,'weight':weight,'height':height,'cholesterol':cholesterol,'blood_pressure':blood_pressure,'glocose':glocose,'age':patient.age()}
         serializer=self.serializer_class(qs)
+
         return Response(serializer.data,HTTP_200_OK);
 
 class GetDoctorAll(APIView):
@@ -257,22 +255,6 @@ class Grant(APIView):
     def post(self, request, *args, **kwargs):
         serializer=GrantedSerializer
 
-class CallingState(APIView):
-    permission_classes=[IsAuthenticated,IsDoctor,IsActive]
-    def get(self, request,*args,**kwargs):
-        status:str=request.GET.get('state')
-        if status.lower()=='on':
-            status=True
-        elif status.lower()=='off':
-            status=False
-        else:
-            return Response({'Error': 'invalid status in request parameter'},status=HTTP_400_BAD_REQUEST)
-        doctor:Doctor=Doctor.objects.get(user=request.user)
-        if doctor.is_vc_available==status:
-            return Response({'Error': 'Your current status is same as requested status'},status=HTTP_208_ALREADY_REPORTED)
-        doctor.is_vc_available=status
-        doctor.save()
-        return Response(status=HTTP_200_OK)
         
         
         

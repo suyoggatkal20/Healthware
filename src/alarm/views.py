@@ -8,4 +8,4 @@ class CreateAlarm(APIView):
     permission_classes=[IsAuthenticated, IsDoctor, IsAuthDoctor, IsActive]
     def post(self, request, *args, **kwargs):
         """
-        """
+        """ 

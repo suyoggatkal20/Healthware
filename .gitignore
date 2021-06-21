@@ -3,3 +3,4 @@
 /Scripts/**
 *.log
 settings.py
+google-services.json

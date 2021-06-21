@@ -336,3 +336,7 @@ class Granted(models.Model):
     granting_user=models.ForeignKey(User, related_name='granted_granting', on_delete=models.CASCADE)
     granted_at=models.DateTimeField(auto_now_add=True)
     duration=models.DurationField(default=datetime.timedelta(minutes=60))
+    def grant(self,asking_user,granting_user):
+        qs=self.objects.filter(asking_user=asking_user,granting_user=granting_user)
+        qs=qs.order_by('granted_at').last()
+        qs.filter()

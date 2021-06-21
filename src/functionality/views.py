@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from functionality.main import report_gen
 from rest_framework import fields
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
@@ -421,7 +422,6 @@ class Address(APIView):
 
 class GetAddress(APIView):
     permission_classes = [IsAuthenticated, IsAuthDoctor | IsPatient, IsActive]
-
     def get(self, request, *args, **kwargs):
         if request.user.user_type == 'P':
             try:
@@ -436,3 +436,42 @@ class GetAddress(APIView):
         else:
             responce = dict(Error='Wrong user data requested')
             return Response(responce, HTTP_404_NOT_FOUND)
+
+class GetReport(APIView):
+    permission_classes=[IsAuthenticated,IsDoctor|IsPatient,IsActive]
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type=='D':
+            try:
+                pk=request.GET.get('patient_user_id')
+                pk=int(pk)
+                patient:Patient=Patient.objects.get(user=User.objects.get(pk=pk))
+            except:
+                return Response({'Error':'Invalid patient_user_id parameter'},status=HTTP_400_BAD_REQUEST)
+            doctor:Doctor=Doctor.objects.get(user=request.user)
+            
+
+
+        patient:Patient=Patient.objects.get(user=request.user);
+        address = Address.objects.filter(person=patient)
+
+        emergency_contact = EmergencyContact.objects.filter(patient=patient)
+
+        allergies = Allergies.objects.filter(patient=patient)
+
+        past_diseases = PastDiseases.objects.filter(patient=patient)
+
+        addictions = Addictions.objects.filter(patient=patient)
+
+        weight = Weight.objects.filter(patient=patient)
+
+        height = Height.objects.filter(patient=patient)
+
+        cholesterol = Cholesterol.objects.filter(patient=patient)
+
+        blood_pressure = BloodPressure.objects.filter(patient=patient)
+
+        glocose = Glocose.objects.filter(patient=patient)
+        qs={"user":request.user,"patient":patient,"address":address,'emergency_contact':emergency_contact,'allergies':allergies,'past_diseases':past_diseases,'addictions':addictions,'weight':weight,'height':height,'cholesterol':cholesterol,'blood_pressure':blood_pressure,'glocose':glocose,'age':patient.age()}
+        serializer=self.serializer_class(qs)
+        report_gen(serializer.data, "/../media/reports", ".pdf")
+        return Response(status=HTTP_200_OK)

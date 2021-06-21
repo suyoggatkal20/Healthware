@@ -21,5 +21,3 @@ class AppointmentResidue(models.Model):
     is_successful=models.BooleanField(default=True)
     time_finalized=models.DateTimeField(auto_now_add=True);
     status = models.CharField(max_length=500, null=True)
-
-

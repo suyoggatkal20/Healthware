@@ -276,8 +276,18 @@ class DoctorListSerializer(DynamicFieldsModelSerializer):
         fields = ['first_name', 'last_name', 'dob', 'gender', 'speciality', 'appoinment_duration', 'practice_started', 'start_time', 'end_time', 'lunch_start',
                   'lunch_end', 'break_start', 'break_end', 'charge_per_app', 'avg_rating', 'email', 'phone', 'address', 'emergency_contact', 'other', 'busy', 'slot']
 
-class DoctorListSerializer(DynamicFieldsModelSerializer):
-    avg_rating = FloatField()
+class DoctorListSerializer(Serializer):
+    #avg_rating = FloatField()
+    user=UserSerializer(exclude=['last_login','user_type','is_email_varified','is_phone_varified','is_active','min_setup_complete','date_joined','groups',
+    'user_permissions','password','is_superuser','is_staff'],required=False)
+    doctor=DoctorSerializer(exclude=['id','user','call_active','end_time','start_time','practice_started','appoinment_duration','media'],required=False)
+    address=address = AddressSerializer(
+        exclude=['person'], many=True, required=False)
+
+
+    email=EmailSerializer(exclude=['id','person'], many=True, required=False)
+    phone=PhoneSerializer(exclude=['id','person'], many=True, required=False)
+
 
 
 

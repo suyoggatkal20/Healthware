@@ -34,6 +34,11 @@ urlpatterns = [
     path('get_past_diseases/<int:pk>/', GetPastDiseases.as_view()),
     path('get_past_diseases/', GetPastDiseases.as_view()),
 
+    path('break/<int:pk>/', PastDiseases.as_view()),
+    path('break/', PastDiseases.as_view()),
+    path('get_break/<int:pk>/', GetPastDiseases.as_view()),
+    path('get_break/', GetPastDiseases.as_view()),
+
     path('allergies/<int:pk>/', Allergies.as_view()),
     path('allergies/', Allergies.as_view()),
     path('get_allergies/<int:pk>/', GetAllergies.as_view()),
@@ -50,4 +55,5 @@ urlpatterns = [
     path('address/', Address.as_view()),
     path('get_address/<int:pk>/', GetAddress.as_view()),
     path('get_address/', GetAddress.as_view()),
+    path('get_report/', GetReport.as_view()),
 ]

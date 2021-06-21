@@ -43,5 +43,5 @@ urlpatterns = [
     path('isEmailAvailable/', IsEmailAvailable.as_view()),
     path('get_patient_all/', GetPatientAll.as_view()), 
     path('get_doctor_all/', GetDoctorAll.as_view()),
-    path('calling_state/', CallingState.as_view()),
+    
 ]
