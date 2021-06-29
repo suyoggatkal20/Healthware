@@ -12,14 +12,16 @@ info1 = json.loads(json_info)
 
 class PDF(FPDF):
     def header(self):
-        self.image("doctorLogo.jpg", 20, 10, 20)
+        self.image(
+            "D:\Projects\Healthware\src\media\default_profile.jpg", 20, 10, 20)
         self.set_font("helvetica", 'B', 20)
         self.set_text_color(150, 27, 187)
         self.cell(0, 10, "HealthWare", align='C', ln=True)
         self.set_font('times', '', 12)
         self.set_text_color(0, 0, 0)
         self.cell(45)
-        self.cell(0, 10, "Contact no: 1234567890, Email: abc.gmail.com", 'C', ln=True)
+        self.cell(
+            0, 10, "Contact no: 1234567890, Email: abc.gmail.com", 'C', ln=True)
         self.ln(12)
 
     def footer(self):
@@ -46,7 +48,8 @@ def report_gen(info, path, filename):
     pdf.add_page()
 
     pdf.set_font('times', 'B', 12)
-    pdf.cell(60, 10, "It is Auto-generated report pdf", border=True, align='C', ln=True)
+    pdf.cell(60, 10, "It is Auto-generated report pdf",
+             border=True, align='C', ln=True)
 
     pdf.set_font('times', 'BU', 16)
     pdf.cell(40, 30, "MEDICAL REPORT", ln=True)
@@ -56,8 +59,9 @@ def report_gen(info, path, filename):
     # basic info
     pdf.field_info("FIRST NAME", info["patient"]["first_name"])
     pdf.field_info("LAST NAME", info["patient"]["last_name"])
-    pdf.field_info("EMAIL", info["email"])
-    pdf.field_info("PHONE NO", info["country_code"] + info["phone"])
+    pdf.field_info("EMAIL", info["user"]["email"])
+    pdf.field_info("PHONE NO", info['user']
+                   ["country_code"] + info['user']["phone"])
     pdf.field_info("DOB", info["patient"]["dob"])
     pdf.field_info("GENDER", info["patient"]["gender"])
     pdf.field_info("BLOOD GROUP", info["patient"]["blood_group"])
@@ -69,45 +73,55 @@ def report_gen(info, path, filename):
     pdf.set_font('times', 'B', 12)
     pdf.cell(width - 30, 15, "ADDRESS:")
     pdf.set_font('times', '', 12)
-    pdf.multi_cell(width, 15, info["address"][0]["house_no"] + " , " + info["address"][0]["locality"])
+    pdf.multi_cell(width, 15, info["address"][0]
+                   ["house_no"] + " , " + info["address"][0]["locality"])
     pdf.ln()
 
     # allergies
     width = pdf.w * 0.1
     pdf.set_font('times', 'B', 12)
-    pdf.cell(h=15, txt="ALLERGIES:", ln=True)
+    pdf.cell(w=0, h=15, txt="ALLERGIES:", ln=True)
     pdf.set_font('times', '', 12)
 
     for i in range(len(info["allergies"])):
         pdf.cell(w=width)
-        pdf.cell(h=10, txt=str(i + 1) + ". Name: " + info["allergies"][i]["allergies"], ln=True)
+        pdf.cell(w=0, h=10, txt=str(i + 1) + ". Name: " +
+                 info["allergies"][i]["allergies"], ln=True)
         pdf.cell(w=width)
-        pdf.cell(h=10, txt="    Description: " + info["allergies"][i]["description"], ln=True)
+        abc = info["allergies"][i]["description"]
+        pdf.cell(w=0, h=10, txt="    Description: " +
+                 abc if abc else ' None', ln=True)
 
     # past diseases
     width = pdf.w * 0.1
     pdf.set_font('times', 'B', 12)
-    pdf.cell(h=15, txt="PAST DISEASES:", ln=True)
+    pdf.cell(w=0, h=15, txt="PAST DISEASES:", ln=True)
     pdf.set_font('times', '', 12)
 
     for i in range(len(info["past_diseases"])):
         pdf.cell(w=width)
-        pdf.cell(h=10, txt=str(i + 1) + ". Name: " + info["past_diseases"][i]["past_diseases"], ln=True)
+        pdf.cell(w=0, h=10, txt=str(i + 1) + ". Name: " +
+                 info["past_diseases"][i]["past_diseases"], ln=True)
         pdf.cell(w=width)
-        pdf.cell(h=10, txt="    Description: " + info["past_diseases"][i]["description"], ln=True)
+        abc=info["past_diseases"][i].get("description")
+        pdf.cell(w=0, h=10, txt="    Description: " +
+                 abc if abc else ' None', ln=True)
 
     # addiction
     width = pdf.w * 0.1
     pdf.set_font('times', 'B', 12)
-    pdf.cell(h=15, txt="ADDICTIONS:", ln=True)
+    pdf.cell(w=0, h=15, txt="ADDICTIONS:", ln=True)
     pdf.set_font('times', '', 12)
 
     for i in range(len(info["addictions"])):
         pdf.cell(w=width)
         if info["addictions"][i]["current"]:
-            pdf.cell(h=10, txt=str(i + 1) + ". " + info["addictions"][i]["addiction"], ln=True)
+            abc=info["addictions"][i]["addiction"]
+            pdf.cell(w=0,h=10, txt=str(i + 1) + ". " +
+                    abc if abc else 'None', ln=True)
     print(path+filename)
     pdf.output(path+filename)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     report_gen(info1, "report/", "report.pdf")

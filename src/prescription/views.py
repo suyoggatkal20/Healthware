@@ -10,7 +10,7 @@ from .serializers import PrescriptionSerializer, MedicineDetailsSerializer
 from .models import Prescription, MedicineDetails
 
 class CreatePrescription(APIView):
-    permission_classes = [IsAuthenticated, IsDoctor, IsAuthDoctor, IsActive]
+    permission_classes = [IsAuthenticated, IsDoctor, IsActive]
     def post(self, request, *args, **kwargs):
         serializer=PrescriptionSerializer(data=request.data,context={
             'request': request

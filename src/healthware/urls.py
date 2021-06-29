@@ -15,8 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from django.urls.conf import include
+from django.urls.conf import include, re_path
 from accounts import urls as acc_url
+import accounts
 from functionality import urls as fun_url
 from django_email_verification import urls as email_urls
 from appointment import urls as appo_urls
@@ -24,7 +25,7 @@ from calling import urls as call_urls
 from django.conf import settings
 from django.conf.urls.static import static
 from prescription import urls as pre_urls
-
+from accounts.views import ServeMedia
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('account/', include(acc_url)),
@@ -33,5 +34,7 @@ urlpatterns = [
     path('calling/', include(call_urls)),
     path('email/', include(email_urls)),
     path('prescription/', include(pre_urls)),
-
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    re_path(r'^media/(?P<path>.*)$', ServeMedia.as_view()),
+    #re_path(r'^media/profile/(?P<path>.*)$', ServeProfile.as_view())
+]
+# + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

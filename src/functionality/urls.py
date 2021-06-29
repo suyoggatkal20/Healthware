@@ -56,4 +56,5 @@ urlpatterns = [
     path('get_address/<int:pk>/', GetAddress.as_view()),
     path('get_address/', GetAddress.as_view()),
     path('get_report/', GetReport.as_view()),
+    path('get_cholesterol_graph/', GetCholesterolGraph.as_view()),
 ]

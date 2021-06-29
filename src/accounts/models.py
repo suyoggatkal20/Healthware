@@ -3,6 +3,7 @@ from django.db import models
 
 # Create your models here.
 from django.db import models
+from django.db.models import F
 from django.db.models.fields import NullBooleanField
 from django.template.defaultfilters import date
 from django_countries.fields import CountryField
@@ -12,6 +13,12 @@ from django.contrib.auth.models import AbstractBaseUser, UserManager, AbstractUs
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.models import User
 import datetime
+import pytz
+
+
+def upload_path(instance, filename: str):
+    ext = filename.split('.')[-1]
+    return 'profile/'+str(instance.user.pk)+'.'+ext
 
 
 class UserManager(UserManager):
@@ -87,16 +94,19 @@ class Person(models.Model):
     dob = models.DateField()
     gender = models.CharField(max_length=2, choices=GENDER_CHOICES, null=True)
     media = models.CharField(max_length=150, null=True)
+    profile = models.ImageField(upload_to=upload_path,default='profile/default_profile.jpg')
+
     def age(self):
-        today=datetime.date.today()
+        today = datetime.date.today()
         try:
-            birthday=self.dob.replace(year=today.year)
+            birthday = self.dob.replace(year=today.year)
         except ValueError:
-            birthday=self.dob.replace(day=self.dob.day-1,year=today.year)
-        if birthday>today:
-            return today.year-self.dob.year-1;
+            birthday = self.dob.replace(day=self.dob.day-1, year=today.year)
+        if birthday > today:
+            return today.year-self.dob.year-1
         else:
-            return today.year-self.dob.year;
+            return today.year-self.dob.year
+
     def __str__(self):
         return self.first_name+" "+self.last_name
 
@@ -133,34 +143,36 @@ class Patient(Person):
     def __str__(self):
         return super().__str__()+' Patient'
 
-def get_profile_name(instance,filename):
-    return 'doct_profile : '+instance.id
+
 class Doctor(Person):
     speciality = models.CharField(max_length=120)
     degree = models.CharField(max_length=50, verbose_name=_('Degree'))
-    appoinment_duration = models.DurationField(verbose_name=_('appointment duration'))
-    practice_started = models.DateField(verbose_name=_('Practice started Date'))
+    appoinment_duration = models.DurationField(
+        verbose_name=_('appointment duration'))
+    practice_started = models.DateField(
+        verbose_name=_('Practice started Date'))
     start_time = models.TimeField(verbose_name=_('clinic open time'))
     end_time = models.TimeField(verbose_name=_('clinic close time'))
-    is_vc_available = models.BooleanField(default=False, verbose_name=_('Available for Video Calling'))
-    call_active = models.BooleanField(default=False, verbose_name=_('Video call is going on'))
-    charge_per_app = models.DecimalField(max_digits=6, decimal_places=2, default=300, verbose_name=_('Charge per appointment'))
-    charge_per_vc = models.DecimalField(max_digits=6, decimal_places=2, default=200, verbose_name=_('Charge per video calling'))
-    profile=models.ImageField(upload_to=get_profile_name,default='default_profile.jpg')
-    fcm_token=models.CharField(max_length=700)
+    is_vc_available = models.BooleanField(
+        default=False, verbose_name=_('Available for Video Calling'))
+    call_active = models.BooleanField(
+        default=False, verbose_name=_('Video call is going on'))
+    charge_per_app = models.DecimalField(
+        max_digits=6, decimal_places=2, default=300, verbose_name=_('Charge per appointment'))
+    charge_per_vc = models.DecimalField(
+        max_digits=6, decimal_places=2, default=200, verbose_name=_('Charge per video calling'))
+    fcm_token = models.CharField(max_length=700)
 
-
-    
-    def experience(self)->int:
-        today=datetime.date.today()
+    def experience(self) -> int:
+        today = datetime.date.today()
         try:
-            day=self.dob.replace(year=today.year)
+            day = self.dob.replace(year=today.year)
         except ValueError:
-            day=self.dob.replace(day=self.dob.day-1,year=today.year)
-        if day>today:
-            return today.year-self.practice_started.year-1;
+            day = self.dob.replace(day=self.dob.day-1, year=today.year)
+        if day > today:
+            return today.year-self.practice_started.year-1
         else:
-            return today.year-self.practice_started.year;
+            return today.year-self.practice_started.year
 
     def __str__(self):
         return super().__str__()+'Doctor'
@@ -170,21 +182,26 @@ class Address(models.Model):
     id = models.AutoField(primary_key=True)
     house_no = models.CharField(max_length=100, default=None, verbose_name=_(
         'House Number/ Flat Number'), null=True)
-    locality = models.CharField(max_length=100, verbose_name=_('locality'), default=None, null=True)
+    locality = models.CharField(max_length=100, verbose_name=_(
+        'locality'), default=None, null=True)
     district = models.CharField(max_length=50, default=None, null=True)
     state = models.CharField(max_length=50, default=None, null=True)
     country = models.CharField(max_length=50, default=None, null=True)
     pincode = models.CharField(max_length=50, default=None, null=True)
-    latitude = models.DecimalField(max_digits=10, decimal_places=7, default=None, null=True)
-    longitude = models.DecimalField(max_digits=10, decimal_places=7, default=None, null=True)
-    person = models.ForeignKey(Person, related_name='address', on_delete=models.CASCADE)
+    latitude = models.DecimalField(
+        max_digits=10, decimal_places=7, default=None, null=True)
+    longitude = models.DecimalField(
+        max_digits=10, decimal_places=7, default=None, null=True)
+    person = models.ForeignKey(
+        Person, related_name='address', on_delete=models.CASCADE)
 
 
 class Phone(models.Model):
     id = models.AutoField(primary_key=True)
     country_code = models.CharField(max_length=3, default="+91")
     phone = models.CharField(max_length=120, null=True)
-    person = models.ForeignKey(Person, related_name='phone', on_delete=models.CASCADE)
+    person = models.ForeignKey(
+        Person, related_name='phone', on_delete=models.CASCADE)
 
 
 class EmergencyContact(models.Model):
@@ -199,24 +216,28 @@ class EmergencyContact(models.Model):
 class Email(models.Model):
     id = models.AutoField(primary_key=True)
     email = models.CharField(max_length=120)
-    person = models.ForeignKey(Person, related_name='email', on_delete=models.CASCADE)
+    person = models.ForeignKey(
+        Person, related_name='email', on_delete=models.CASCADE)
+
 
 class Allergies(models.Model):
     id = models.AutoField(primary_key=True)
     allergies = models.CharField(max_length=120)
     description = models.CharField(max_length=1000, null=True)
-    patient = models.ForeignKey(Patient, related_name='allergies', on_delete=models.CASCADE)
+    patient = models.ForeignKey(
+        Patient, related_name='allergies', on_delete=models.CASCADE)
+
 
 class PastDiseases(models.Model):
     id = models.AutoField(primary_key=True)
     past_diseases = models.CharField(max_length=120)
     discription = models.CharField(max_length=1000, null=True)
-    patient = models.ForeignKey(Patient, related_name='past_diseases', on_delete=models.CASCADE)
+    patient = models.ForeignKey(
+        Patient, related_name='past_diseases', on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if self.id is None:
             super(PastDiseases, self).save(*args, **kwargs)
-
 
 
 class Other(models.Model):
@@ -231,8 +252,8 @@ class Addictions(models.Model):
     id = models.AutoField(primary_key=True)
     addiction = models.CharField(max_length=120, null=True)
     current = models.BooleanField(default=True)
-    patient = models.ForeignKey(Patient, related_name='addictions', on_delete=models.CASCADE)
-
+    patient = models.ForeignKey(
+        Patient, related_name='addictions', on_delete=models.CASCADE)
 
 
 class Weight(models.Model):
@@ -324,19 +345,25 @@ class Break(models.Model):
                             default='General Break')
     doctor = models.ForeignKey(
         Doctor, related_name='scheduled_off', on_delete=models.CASCADE, null=False)
-    time_start = models.DateTimeField(
-        auto_now=False, auto_now_add=False, null=False)
-    time_end = models.DateTimeField(
-        auto_now=False, auto_now_add=False, null=False)
+    time_start = models.DateTimeField(null=False)
+    time_end = models.DateTimeField(null=False)
     reason = models.CharField(max_length=1000, null=True)
     repeat = models.CharField(max_length=1, choices=REPEAT_CHOICE, null=False)
 
+
 class Granted(models.Model):
-    asking_user=models.ForeignKey(User, related_name='granted_asking', on_delete=models.CASCADE)
-    granting_user=models.ForeignKey(User, related_name='granted_granting', on_delete=models.CASCADE)
-    granted_at=models.DateTimeField(auto_now_add=True)
-    duration=models.DurationField(default=datetime.timedelta(minutes=60))
-    def grant(self,asking_user,granting_user):
-        qs=self.objects.filter(asking_user=asking_user,granting_user=granting_user)
-        qs=qs.order_by('granted_at').last()
-        qs.filter()
+    asking_user = models.ForeignKey(
+        User, related_name='granted_asking', on_delete=models.CASCADE)
+    granting_user = models.ForeignKey(
+        User, related_name='granted_granting', on_delete=models.CASCADE)
+    granted_at = models.DateTimeField(auto_now_add=True)
+    duration = models.DurationField(default=datetime.timedelta(minutes=60))
+    @classmethod
+    def is_granted(cls, asking_user, granting_user):
+        today=datetime.datetime.now(tz=pytz.timezone('Asia/Kolkata'))
+        qs = Granted.objects.filter(
+            asking_user=asking_user, granting_user=granting_user)
+        if qs.filter(granted_at__gte=today-F('duration')).exists():
+            return True
+        else:
+            return False

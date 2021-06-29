@@ -1,3 +1,4 @@
+from datetime import tzinfo
 from django.db.models import fields
 from django.utils.translation import gettext_lazy as _
 
@@ -66,7 +67,6 @@ class PatientSerializer(DynamicFieldsModelSerializer):
             'blood_group': {'required': False},
             'education': {'required': False}, }
 
-
 class DoctorSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Doctor
@@ -74,8 +74,14 @@ class DoctorSerializer(DynamicFieldsModelSerializer):
         extra_kwargs = {
             'is_vc_available': {'required': False},
             'call_active': {'required': False}, }
+    def validate(self, attrs):
+        tz=pytz.timezone('Asia/Kolkata')
+        attrs['start_time']=tz.localize(attrs['start_time']).replace(second=0,microsecond=0)
+        attrs['end_time']=tz.localize(attrs['end_time']).replace(second=0,microsecond=0)
+        return attrs;
     def create(self, data):
         patient = self.context['request'].user.person.patient
+        print(data)
         doctor = Doctor.objects.create(patient=patient, **data)
         doctor.save()
         return doctor;
@@ -172,12 +178,6 @@ class AddictionsSerializer(DynamicFieldsModelSerializer):
         addictions.save()
         return addictions
 
-    def create(self, data):
-        patient = self.context['request'].user.person.patient
-        addictions = Addictions.objects.create(patient=patient, **data)
-        addictions.save()
-        return addictions
-
 # class MedicinesSerializer(DynamicFieldsModelSerializer):
 #     class Meta:
 #         model = Medicines
@@ -188,7 +188,6 @@ class WeightSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Weight
         fields = '__all__'
-
     def create(self, data):
         patient = self.context['request'].user.person.patient
         weight = Weight.objects.create(patient=patient, **data)
@@ -200,7 +199,6 @@ class HeightSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Height
         fields = '__all__'
-
     def create(self, data):
         patient = self.context['request'].user.person.patient
         height = Height.objects.create(patient=patient, **data)
@@ -248,6 +246,33 @@ class BreakSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Break
         fields = '__all__'
+    def validate(self, data):
+        from django.utils import timezone
+        import datetime
+        import pytz
+        from appointment.appointment_slots import get_str_rep, check_break
+        tz=pytz.timezone('Asia/Kolkata')
+        data['time_start']=data['time_start'].replace(second=0,microsecond=0)
+        data['time_end']=data['time_end'].replace(second=0,microsecond=0)
+        today=tz.localize(datetime.datetime.now()).replace(hour=0,minute=0, second=0,microsecond=0)
+        if data['time_start'].date() != data['time_end'].date():
+            raise serializers.ValidationError("Break must start and end in same date");
+        if data['time_start'].time() <= self.context['doctor'].start_time:
+            raise serializers.ValidationError("Break time is befour clinic start time");
+        if (data['time_end']).time() >= self.context['doctor'].end_time:
+            raise serializers.ValidationError("Break time is after clinic end time");
+        if data['time_start'] > data['time_end']:
+            raise serializers.ValidationError("break start time must be less than end time");
+        if data['time_start'].date() < today.date() or data['time_end'].date() > (today+datetime.timedelta(days=7)).date(): 
+             raise serializers.ValidationError("Break time is not within next 7 days");
+        str_rep=get_str_rep(self.context['doctor'])
+        if not check_break(str_rep,data['time_start'],data['time_end'],data['repeat']):
+            raise serializers.ValidationError("appointment is scheduled at break time, Frist cancel the appointment and then try again");
+        return data;
+    def create(self, validated_data):
+        break_=Break.objects.create(**validated_data,doctor=self.context['doctor']) 
+        return break_;
+        
 
 
 class RatingSerializer(DynamicFieldsModelSerializer):
@@ -280,13 +305,21 @@ class DoctorListSerializer(Serializer):
     #avg_rating = FloatField()
     user=UserSerializer(exclude=['last_login','user_type','is_email_varified','is_phone_varified','is_active','min_setup_complete','date_joined','groups',
     'user_permissions','password','is_superuser','is_staff'],required=False)
-    doctor=DoctorSerializer(exclude=['id','user','call_active','end_time','start_time','practice_started','appoinment_duration','media'],required=False)
+    doctor=DoctorSerializer(exclude=['id','user','call_active','end_time','start_time','practice_started','appoinment_duration','media','fcm_token'],required=False)
     address=address = AddressSerializer(
         exclude=['person'], many=True, required=False)
 
 
     email=EmailSerializer(exclude=['id','person'], many=True, required=False)
     phone=PhoneSerializer(exclude=['id','person'], many=True, required=False)
+    avg_rating=serializers.DecimalField(2,1);
+    class ExperienceField(serializers.RelatedField):
+        def to_representation(self, value):
+            print(value,value.total_seconds())
+            return value.total_seconds()//(31556952)
+    experiance=ExperienceField(read_only=True);
+
+
 
 
 
@@ -449,8 +482,11 @@ class CreatePatientSerializer(Serializer):
 
 
 
+
+
+
 class GetPatientAllSerializer(Serializer):
-    user=UserSerializer(fields=['id','email','country_code','phone'])
+    user=UserSerializer(fields=['id','email','country_code','phone'],)
     patient=PatientSerializer(exclude=['id','media','user'])
     address = AddressSerializer(
         exclude=['person'], many=True, required=False)
@@ -481,7 +517,7 @@ class GetPatientAllSerializer(Serializer):
 
     glocose = GlocoseSerializer(exclude=['patient'], many=True, required=False)
 
-    age=serializers.IntegerField()
+    age=serializers.IntegerField(read_only=True,)
     
 
 class GetDoctorAllSerializer(Serializer):
@@ -491,9 +527,6 @@ class GetDoctorAllSerializer(Serializer):
         exclude=['person'], many=True, required=False)
     age=serializers.IntegerField()
     experience=serializers.IntegerField()
-
-
-
 
 # class CreatePrescriptionSerializer(Serializer):
 #     patient = serializers.SerializerMethodField('get_patient')
@@ -532,3 +565,6 @@ class GrantedSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model=Granted
         fields='__all__'
+    def create(self, validated_data):
+        grant=Granted.objects.create(**validated_data,asking_user=self.context['asking_user'])
+        return grant;

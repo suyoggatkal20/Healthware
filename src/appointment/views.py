@@ -1,7 +1,9 @@
+from datetime import datetime
 from django.db.models import fields
 from django.shortcuts import render
 from accounts.models import Break, Doctor, Patient
 from accounts.serializers import BreakSerializer
+from appointment.appint import appoint
 from rest_framework import response, serializers
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -19,19 +21,17 @@ class CreateAppointment(APIView):
     serializer_class = AppointmentSerializer
 
     def post(self, request, *args, **kwargs):
-        appointmentSerializer = AppointmentSerializer(
-            context={"request": request}, data=request.data, fields=['doctor', 'time_start', 'reason'])
+        
+        appointmentSerializer = AppointmentSerializer(context = {"request": request}, data=request.data, fields=['doctor', 'time_start', 'reason'])
         if appointmentSerializer.is_valid():
             appointmentSerializer.save()
             return Response(data=appointmentSerializer.data, status=HTTP_201_CREATED)
         else:
-            return Response(data=appointmentSerializer.errors, status=HTTP_400_BAD_REQUEST)
+            return Response(data=appointmentSerializer.errors, status=HTTP_400_BAD_REQUEST)  
 
-
-class DeleteAppointment(APIView):
-    permission_classes = [IsAuthenticated, IsPatient | IsDoctor, IsActive]
-
-    def get(self, request, pk=None, *args, **kwargs):
+class Appointment(APIView):
+    permission_classes = [IsAuthenticated, IsPatient|IsDoctor, IsActive]
+    def delete(self, request, pk=None, *args, **kwargs):
         try:
             appointment: Appointment = Appointment.objects.get(pk=pk)
         except:
@@ -40,44 +40,47 @@ class DeleteAppointment(APIView):
             appointment.delete()
             return Response(status=HTTP_200_OK)
         else:
-            return Response({'Error': 'Your are not allowed to this action'}, status=HTTP_401_UNAUTHORIZED)
+            return Response({'Error': 'Your are not allowed to this action'}, status=HTTP_401_UNAUTHORIZED )
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type=='P':
+            qs=Appointment.objects.filter(patient=Patient.objects.get(user=request.user));
+            serializer=AppointmentSerializer(qs,many=True,exclude=['patient'])
+            return Response(serializer.data, status=HTTP_200_OK)
+        else:
+            qs=Appointment.objects.filter(doctor=Doctor.objects.get(user=request.user));
+            serializer=AppointmentSerializer(qs,many=True,exclude=['patient'])
+            return Response(serializer.data, status=HTTP_200_OK)
 
+
+    
 
 class GetSlot(APIView):
-    permission_classes = [IsAuthenticated, IsDoctor, IsActive]
+    permission_classes = [IsAuthenticated, IsDoctor|IsPatient, IsActive]
+    def get(self, request,doctor_id=None, *args, **kwargs):
+        if request.user.user_type=='P':
+            try:
+                pk = doctor_id
+                print('bsdvhn', pk)
+                pk = int(pk)
+                print('wfyvgdabj', pk)
+                user = User.objects.get(pk=pk)
+                print('wfybj', pk)
+                doctor: Doctor = Doctor.objects.get(user=user)
+                print('wfyvg', doctor)
+            except Exception as e:
+                return Response({'Error': 'invalid doctor id'}, status=HTTP_400_BAD_REQUEST)
+        else:
+            doctor:Doctor=Doctor.objects.get(user=request.user)
+        from .appointment_slots import get_str_rep, str_to_slots
+        print('view1')
+        str_rep=get_str_rep(doctor)
 
-    def get(self, request, *args, **kwargs):
-        try:
-            pk = request.GET.get("doctor_id")
-            print('bsdvhn', pk)
-            pk = int(pk)
-            print('wfyvgdabj', pk)
-            user = User.objects.get(pk=pk)
-            print('wfybj', pk)
-            doctor: Doctor = Doctor.objects.get(user=user)
-            print('wfyvg', doctor)
-
-        except Exception as e:
-            return Response({'Error': 'invalid doctor id'}, status=HTTP_400_BAD_REQUEST)
-        appointment = AppointmentSerializer(
-            Appointment.objects.filter(doctor=doctor), many=True)
-        break_ = BreakSerializer(
-            Break.objects.filter(doctor=doctor), many=True)
-        print('hgvv', appointment, appointment.data)
-        dict_ = {
-            "clinic_start_time": doctor.start_time,
-            "clinic_end_time": doctor.end_time,
-            "appointment_duration": doctor.appoinment_duration,
-            "break": break_.data,
-            "appointment": appointment.data
-        }
-        print(dict_)
-        return Response(dict_, status=HTTP_200_OK)
+        print('view2',str_rep)
+        list_of_slots=str_to_slots(str_rep, doctor.appoinment_duration)
+        print('view3')
+        return Response(list_of_slots, status=HTTP_200_OK)
 
 
-class AppointmentViewSet(ModelViewSet):
-    queryset = Appointment.objects.all()
-    serializer_class = AppointmentSerializer
 
 
 class BreakView(APIView):
@@ -85,7 +88,7 @@ class BreakView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = BreakSerializer(
-            fields=['name', 'time_start', 'time_end', 'reason', 'repeat'], data=request.data)
+            fields=['name', 'time_start', 'time_end', 'reason', 'repeat'], data=request.data,context={'doctor':Doctor.objects.get(user=request.user)})
         doctor: Doctor = Doctor.objects.get(user=request.user)
         if serializer.is_valid():
             break_ = Break(**serializer.validated_data, doctor=doctor)

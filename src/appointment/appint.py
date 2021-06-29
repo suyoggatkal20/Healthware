@@ -46,8 +46,13 @@ appointment_data = {
 
 
 def appoint(app):
-    st = app["clinic_start_time"]
-    et = app["clinic_end_time"]
+    st = datetime.strptime(app["clinic_start_time"], '%Y/%d/%m %H:%M:%S')
+    et = datetime.strptime(app["clinic_end_time"], '%Y/%d/%m %H:%M:%S')
+    st.replace(second=0, microsecond=0)
+    et.replace(second=0, microsecon=0)
+    st = st.strftime("%H/%M/%S")
+    et = et.strftime("%H/%M/%S")
+
     d = app["appointment_duration"]
     start_date = datetime.now().date()
     end_date = datetime.now().date() + timedelta(days=6)
@@ -70,28 +75,21 @@ def appoint(app):
                 if (time.strftime("%Y/%d/%m") == sb.strftime("%Y/%d/%m")) & (
                         time.strftime("%H/%M/%S") == sb.strftime("%H/%M/%S")):
                     avail = "O"
-                    res = "ncsc"
+                    res = i["reason"]
                     d = bd.total_seconds() / 60
-                    # time += timedelta(minutes=bd.total_seconds() / 60)
 
                 elif (time.strftime("%Y/%d/%m") == sb.strftime("%Y/%d/%m")) & ((sb - time).total_seconds() > 0) & (
                         (sb - time).total_seconds() / 60 < d):
                     avail = "O"
-                    res = "ddde"
-                    d = (sb - time).total_seconds() / 60 + bd.total_seconds() / 60
-                    # print(d)
-                    # time += timedelta(minutes=bd.total_seconds()/60
-                """if i["repete on"] == "Y":
-                    i["break_start_time"] = (datetime.fromisoformat(
-                        i["break_start_time"]) + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
-                    # print(i["break_start_time"])
-                    print("cdcdvdv")"""
+                    res = i["reason"]
+                    d = (sb - time).total_seconds() / \
+                        60 + bd.total_seconds() / 60
+
             for i in app["list_of_booked_appointment"]:
                 sa = datetime.fromisoformat(i["appointment_start_time"])
                 if time.strftime("%Y/%d/%m" "%H/%M/%S") == sa.strftime("%Y/%d/%m" "%H/%M/%S"):
                     avail = "B"
-                    res = "Book"
-                    # time += timedelta(minutes=bd.total_seconds() / 60)
+                    res = i["reason"]
                 else:
                     pass
 
@@ -102,13 +100,14 @@ def appoint(app):
 
         for i in app["list_of_breaks"]:
             if i["repete on"] == "Y":
-                i["break_start_time"]=(datetime.fromisoformat(
-                        i["break_start_time"])+timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+                i["break_start_time"] = (datetime.fromisoformat(
+                    i["break_start_time"])+timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
                 i["break_end_time"] = (datetime.fromisoformat(
                     i["break_end_time"]) + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
 
     print(days)
-    return days;
+    return days
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     appoint(appointment_data)

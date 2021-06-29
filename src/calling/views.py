@@ -1,14 +1,16 @@
 # python
-from datetime import datetime
+from datetime import date as dtd
 from datetime import timedelta
 import datetime as dt
 from django.contrib.auth.decorators import permission_required
 # django
 from django.db.models import Q, fields
+from django.db.models.expressions import ExpressionWrapper
 from django.http import HttpResponse
 from django.db.models import Avg
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from calling.serializers import CallLogSerializer
 from healthware.CustomPermissions import IsPatient, IsActive, IsDoctor
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
@@ -28,11 +30,12 @@ from accounts.serializers import DoctorListSerializer
 from accounts.serializers import DoctorSerializer
 from datetime import datetime
 from .models import ActiveCall, CallLogs
+import pytz
 #from calling.models import CallLogs
 # from respond.respond import respond
 
 
-class DoctorCallingList(APIView):
+class DoctorList(APIView):
     permission_classes = [IsAuthenticated, IsPatient, IsActive]
     serializer_class = DoctorListSerializer
 
@@ -42,20 +45,20 @@ class DoctorCallingList(APIView):
         return Response(serializer.data, status=HTTP_200_OK)
 
     def get_queryset(self):
+        from django.db.models.functions import Coalesce
+        from django.db.models import Value,ExpressionWrapper,F,DurationField,IntegerField,FloatField
         self.get_filters()
         queryset = Doctor.objects.all()
-        print(queryset)
+        queryset = queryset.annotate(avg_rating=ExpressionWrapper(Coalesce(Avg('rating__rating'),Value(0)),output_field=FloatField()))
         queryset = self.apply_filters(queryset)
         queryset.select_related('user')
         queryset=queryset.filter(user__is_active=True)
         queryset=queryset.filter(is_vc_available=True)
         queryset.prefetch_related('address', 'phone', 'email')
-        queryset = queryset.annotate(avg_rating=Avg('rating__rating'))
-        #print('hello',queryset[0].avg_rating)
+        queryset=queryset.annotate(experiance=ExpressionWrapper(dtd.today()-F('practice_started'),output_field=DurationField()))
         return queryset
 
     def apply_filters(self, queryset):
-
         if self.min_price:
             queryset = queryset.filter(charge_per_app__gte=self.min_price)
         if self.max_price:
@@ -64,12 +67,12 @@ class DoctorCallingList(APIView):
             queryset = queryset.filter(avg_rating__gte=self.min_rating)
         if self.max_rating:
             queryset = queryset.filter(avg_rating__lte=self.max_rating)
+        tz=pytz.timezone('Asia/Kolkata')
+        today=tz.localize(datetime.datetime.now()).replace(hour=0,minute=0, second=0,microsecond=0)
         if self.min_exp:
-            queryset = queryset.filter(practice_started__lte=(
-                datetime.now()-timedelta(seconds=31556952*int(self.min_exp))))
+            queryset = queryset.filter(practice_started__lte=(today-timedelta(seconds=31556952*int(self.min_exp))))
         if self.max_exp:
-            queryset = queryset.filter(practice_started__gte=(
-                datetime.now()-timedelta(seconds=31556952*int(self.max_exp))))
+            queryset = queryset.filter(practice_started__gte=(today-timedelta(seconds=31556952*int(self.max_exp))))
         if self.name_search:
             queryset = queryset.filter(Q(first_name__icontains=self.name_search) | Q(
                 last_name__icontains=self.name_search))
@@ -239,3 +242,18 @@ class CallingState(APIView):
         doctor.is_vc_available=status
         doctor.save()
         return Response(status=HTTP_200_OK)
+
+    
+
+class GetCallLogs(APIView):
+    permission_classes=[IsAuthenticated,IsDoctor|IsPatient,IsActive]
+    def get(self, request,*args,**kwargs):
+        if request.user.user_type=='P':
+            qs=CallLogs.objects.filter(patient=Patient.objects.get(user=request.user))
+            serializer=CallLogSerializer(qs,fields=['id','doctor','start_time','end_time'],many=True)
+        else:
+            qs=CallLogs.objects.filter(patient=Patient.objects.get(user=request.user,many=True))
+            serializer=CallLogSerializer(qs,fields=['id','doctor','start_time','end_time'],many=True)
+        return Response(serializer.data,status=HTTP_200_OK)
+
+
