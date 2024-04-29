@@ -12,7 +12,7 @@ def validate_appo(str_rep, appointment_start, duration):
     slot_start = int((appointment_start-today).total_seconds()//60)
     slot_end = int((appointment_start-today+duration).total_seconds()//60)
     for i in range(slot_start, slot_end+1):
-        if str_rep[i] != 0:
+        if str_rep[i] != '0':
             return False
     return True
 
@@ -64,14 +64,15 @@ def get_str_rep(doctor):
             # is_valid = is_valid_break(start, end, break_)
             # if not is_valid:
             #     return False
-            if break_.start_time.date() < today.date():
+            if break_.time_start.date() < today.date():
                 print('break creation problem')
                 print('skipped sice it is old break')
-                print(break_.start_time.date())
-                print(break_.end_time.date())
+            if break_.time_start.date() < today.date():
+                print(break_.time_start.date())
+                print(break_.time_end.date())
                 continue
-            slot_start = (break_.start_time-today).total_seconds()//60
-            slot_end = (break_.end_time-today).total_seconds()//60
+            slot_start = (break_.time_start-today).total_seconds()//60
+            slot_end = (break_.time_end-today).total_seconds()//60
             str_rep = str_replace(str_rep, int(slot_start), int(slot_end), 'b')
             continue
         if break_.repeat == "D":
@@ -100,7 +101,7 @@ def get_str_rep(doctor):
             slot_start = (break_.time_start.replace(
                 year=today.year, day=today.day, month=today.month)-today).total_seconds()//60
             print('slot_start', slot_start)
-            slot_end = (break_.end_time.replace(
+            slot_end = (break_.time_end.replace(
                 day=today.day, month=today.month, year=today.year)-today).total_seconds()//60
             print('slot_end', slot_end)
             str_rep = str_replace(str_rep, int(
@@ -182,17 +183,19 @@ def check_break(str_rep, start, end, repete):
                     year=today.year)-today).total_seconds()//60)
     end_min = int((end.replace(day=today.day, month=today.month,
                   year=today.year)-today).total_seconds()//60)
+    start_min1 = int((start-today).total_seconds()//60)
+    end_min1 = int((end-today).total_seconds()//60)
     repete_duration = int(datetime.timedelta(days=1).total_seconds()//60)
     if repete == 'D':
         for i in range(7):
             for j in range(start_min, end_min+1):
                 asx = str_rep[i*repete_duration+j]
                 if str_rep[i*repete_duration+j] != '0' and str_rep[i*repete_duration+j].lower() != 'b':
-                    print("i j", i, j, start_min, end_min, i*repete_duration+j)
+                    # print("i j", i, j, start_min, end_min, i*repete_duration+j)
                     return False
     else:
-        for j in range(start_min, end_min+1):
-            if str_rep[start_min+j] != '0' and str_rep[start_min+j].lower() != 'b':
+        for j in range(start_min1, end_min1+1):
+            if str_rep[j] != '0' and str_rep[j].lower() != 'b':
                 return False
     return True
 
@@ -210,9 +213,9 @@ def str_to_slots(str_rep, appointment_duration):
     today = datetime.datetime.today().replace(
         hour=0, minute=0, second=0, microsecond=0)
     i = 0
-    print(appointment_duration)
+    # print(appointment_duration)
     duration_counter = int(appointment_duration.total_seconds()//60)
-    print(duration_counter)
+    # print(duration_counter)
     add_in_break = False
 
     while i < len(str_rep):
@@ -224,14 +227,14 @@ def str_to_slots(str_rep, appointment_duration):
             while i < len(str_rep) and duration_counter > 0 and str_rep[i] == '0':
                 i += 1
                 duration_counter -= 1
-            print(temp, i, duration_counter)
+            # print(temp, i, duration_counter)
 #             print('dc',duration_counter)
             if duration_counter == 0:
                 empty_slot = {}
                 empty_slot['type'] = 'E'
-                empty_slot['start_index'] = today + \
+                empty_slot['start_datetime'] = today + \
                     datetime.timedelta(minutes=temp)
-                empty_slot['end_index'] = today+datetime.timedelta(minutes=i-1)
+                empty_slot['end_datetime'] = today+datetime.timedelta(minutes=i-1)
                 l.append(empty_slot)
                 duration_counter = int(
                     appointment_duration.total_seconds()//60)
@@ -239,9 +242,9 @@ def str_to_slots(str_rep, appointment_duration):
                 if (i == len(str_rep) or str_rep[i] == 'A' or str_rep[i] == '-'):
                     break_ = {}
                     break_['type'] = 'B'
-                    break_['start_index'] = today + \
+                    break_['start_datetime'] = today + \
                         datetime.timedelta(minutes=temp)
-                    break_['end_index'] = today+datetime.timedelta(minutes=i-1)
+                    break_['end_datetime'] = today+datetime.timedelta(minutes=i-1)
                     l.append(break_)
                     duration_counter = int(
                         appointment_duration.total_seconds()//60)
@@ -255,43 +258,43 @@ def str_to_slots(str_rep, appointment_duration):
             break_ = {}
             break_['type'] = 'B'
             if add_in_break:
-                break_['start_index'] = today+datetime.timedelta(minutes=temp)
+                break_['start_datetime'] = today+datetime.timedelta(minutes=temp)
                 add_in_break = False
             else:
-                break_['start_index'] = today+datetime.timedelta(minutes=i)
+                break_['start_datetime'] = today+datetime.timedelta(minutes=i)
             while i < len(str_rep) and str_rep[i].lower() == 'b':
                 i += 1
             i -= 1
-            break_['end_index'] = today+datetime.timedelta(minutes=i)
+            break_['end_datetime'] = today+datetime.timedelta(minutes=i)
             l.append(break_)
         if (i == 0 or str_rep[i-1] != str_rep[i]) and str_rep[i] == 'A':
             appo = {}
             appo['type'] = 'A'
-            appo['start_index'] = today+datetime.timedelta(minutes=i)
-            appo['end_index'] = today + \
+            appo['start_datetime'] = today+datetime.timedelta(minutes=i)
+            appo['end_datetime'] = today + \
                 datetime.timedelta(minutes=str_rep.index('A', i+1))
             i = str_rep.index('A', i+1)
             l.append(appo)
         i += 1
-    for item in l:
-        if item['type'] == 'B':
-            print('***********************Break**********************************')
-            print(item['start_index'])
-            print(item['end_index'])
-            print()
-            print()
-        if item['type'] == 'A':
-            print('***********************Appointment**********************************')
-            print(item['start_index'])
-            print(item['end_index'])
-            print()
-            print()
-        if item['type'] == 'E':
-            print('***********************Empty**********************************')
-            print(item['start_index'])
-            print(item['end_index'])
-            print()
-            print()
+    # for item in l:
+    #     if item['type'] == 'B':
+    #         print('***********************Break**********************************')
+    #         print(item['start_datetime'])
+    #         print(item['end_datetime'])
+    #         print()
+    #         print()
+    #     if item['type'] == 'A':
+    #         print('***********************Appointment**********************************')
+    #         print(item['start_datetime'])
+    #         print(item['end_datetime'])
+    #         print()
+    #         print()
+    #     if item['type'] == 'E':
+    #         print('***********************Empty**********************************')
+    #         print(item['start_datetime'])
+    #         print(item['end_datetime'])
+    #         print()
+    #         print()
     return l
 
 

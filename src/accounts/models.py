@@ -147,6 +147,7 @@ class Patient(Person):
 class Doctor(Person):
     speciality = models.CharField(max_length=120)
     degree = models.CharField(max_length=50, verbose_name=_('Degree'))
+    description=models.CharField(max_length=50, default='', verbose_name=_('Degree'))
     appoinment_duration = models.DurationField(
         verbose_name=_('appointment duration'))
     practice_started = models.DateField(

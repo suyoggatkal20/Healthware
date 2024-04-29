@@ -3,7 +3,6 @@ from django.urls import path
 from django.urls.conf import include
 from rest_framework.routers import DefaultRouter
 from accounts.views import *
-from accounts.views import Abc
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -45,4 +44,5 @@ urlpatterns = [
     path('get_doctor_all/', GetDoctorAll.as_view()),
     path('add_profile/', AddProfile.as_view()),
     path('grant/', Grant.as_view()),
+    path('get_disease/',Diseases.as_view()),
 ]

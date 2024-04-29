@@ -4,6 +4,8 @@ from django.views.static import serve
 from django.http import response
 from django.shortcuts import redirect, render
 from healthware.settings import MEDIA_ROOT
+import numpy as np
+import pandas as pd
 #from django.contrib.auth.decorators import permission_required
 from prescription.models import MedicineDetails, Prescription
 from prescription.serializers import MedicineDetailsSerializer, PrescriptionSerializer
@@ -48,11 +50,16 @@ class ServeMedia(APIView):
             print(path_list[0])
             print('hsudh')
             owner = User.objects.get(id=requested_owner_id)
-        except Exception:
+        except Exception as e:
+            print(e)
             import traceback
             traceback.print_exc()
             return Response(status=HTTP_404_NOT_FOUND)
         if path.lower().find('report') >= 0:
+            print(request.user.id)
+            print(type(request.user.id))
+            print(requested_owner_id)
+            print(type(requested_owner_id))
             if request.user.id == requested_owner_id:
                 print('hsudh5454')
                 return serve(request, path, document_root=MEDIA_ROOT)
@@ -61,14 +68,13 @@ class ServeMedia(APIView):
                 return serve(request, path, document_root=MEDIA_ROOT)
             else:
                 print('user is not owner and not granted to access the resource')
-                return Response(status=HTTP_400_BAD_REQUEST)
+                return Response({'Error':'user is not owner and not granted to access the resource'},status=HTTP_400_BAD_REQUEST)
         if request.user == owner:
             print('hsudh1')
             return serve(request, path, document_root=MEDIA_ROOT)
         else:
             print('not permited or not found or extra extra')
             return Response(status=HTTP_400_BAD_REQUEST)
-
 
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
@@ -114,7 +120,6 @@ class PhoneViewSet(ModelViewSet):
 class EmergencyContactViewSet(ModelViewSet):
     queryset = EmergencyContact.objects.all()
     serializer_class = EmergencyContactSerializer
-
 
 class EmailViewSet(ModelViewSet):
     queryset = Email.objects.all()
@@ -189,7 +194,7 @@ class MedicineDetailsViewSet(ModelViewSet):
 class CreateDoctor(GenericAPIView, CreateModelMixin):
     permission_classes = [AllowAny, ]
     serializer_class = CreateDoctorSerializer
-
+    
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if(serializer.is_valid()):
@@ -324,11 +329,12 @@ class Grant(APIView):
 
     def post(self, request, *args, **kwargs):
         print(request.data)
-        serializer = GrantedSerializer(data=request.data, exclude=['doctor'],context={"doctor":request.user})
+        serializer = GrantedSerializer(data=request.data, exclude=['granting_user'],context={"granting_user":request.user})
         if serializer.is_valid():
             serializer.save()
             return Response(status=HTTP_200_OK)
         else:
+            print(serializer.errors)
             return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
 
@@ -362,3 +368,58 @@ class AddProfile(APIView):
             return Response(status=HTTP_201_CREATED)
         else:
             return Response({"Error": 'Invalid Immage'}, status=HTTP_400_BAD_REQUEST)
+
+
+class Diseases(APIView):
+    permission_classes=[IsAuthenticated, IsPatient]
+    def post(self, request, *args, **kwargs):
+
+        dataset_path='D:/Projects/Final Year/chatbot try/dataset.csv'
+        symptoms_serializer=SymptomsSerializer(data=request.data);
+        if symptoms_serializer.is_valid():
+            list_class:ListClass=symptoms_serializer.save()
+            symptoms=np.array(list_class.symptom_list)
+            dataset=np.genfromtxt(dataset_path ,delimiter=',',skip_header=1)
+            dataset=dataset[:,:-1]
+            headers=pd.read_csv(dataset_path)
+            symtoms=headers.columns
+            symtoms=np.array(symtoms)
+            diseases=headers['prognosis'].to_numpy()
+            TrainingSymptoms=dataset
+            identity=np.zeros((42,42))
+            np.fill_diagonal(identity,1)
+            #print(identity)
+            ActualOutput=identity
+            train=2*np.random.random((132,42))-1
+            # print(train)
+            Weight=train
+            def sigmoid(x):
+                return 1/(1+np.exp(-x))
+            def DiffSigmoid(x):
+                return np.exp(-x)/((1+np.exp(-x))**2);
+            
+            x=list()
+            y=list()
+            for i in range(1000):
+                UnactivatedOutput=np.matmul(dataset,train)
+                #print(UnactivatedOutput)
+                PredictedOutput=sigmoid(UnactivatedOutput)
+                Error=(ActualOutput-PredictedOutput)
+                Cost=Error**2
+                x.append(i)
+                y.append(np.sum(Cost))
+                delta=np.multiply(-(ActualOutput-PredictedOutput),DiffSigmoid(UnactivatedOutput)) #error distribution matrix
+                change=np.dot(TrainingSymptoms.T,delta)
+                train=train-change;
+            prob=sigmoid(np.matmul(symptoms,train))
+            df=pd.DataFrame(prob,columns=['prob'],dtype='float64')  
+
+            df=df.sort_values('prob',ascending=False)
+
+            top=np.array(df.head(3).index)
+            res=list()
+            for i in top:
+                res.append(diseases[i])
+            return Response(res,status=HTTP_200_OK)
+        else:
+            return Response(symptoms_serializer.errors, status=HTTP_400_BAD_REQUEST)

@@ -42,42 +42,60 @@ class DoctorList(APIView):
     def get(self, request, *args, **kwargs):
         qs = self.get_queryset()
         serializer = DoctorListSerializer(qs, many=True)
+        print(serializer.data)
         return Response(serializer.data, status=HTTP_200_OK)
 
     def get_queryset(self):
         from django.db.models.functions import Coalesce
-        from django.db.models import Value,ExpressionWrapper,F,DurationField,IntegerField,FloatField
+        from django.db.models import Value, ExpressionWrapper, F, DurationField, IntegerField, FloatField
         self.get_filters()
         queryset = Doctor.objects.all()
-        queryset = queryset.annotate(avg_rating=ExpressionWrapper(Coalesce(Avg('rating__rating'),Value(0)),output_field=FloatField()))
+        queryset = queryset.annotate(avg_rating=ExpressionWrapper(
+            Coalesce(Avg('rating__rating'), Value(0)), output_field=FloatField()))
         queryset = self.apply_filters(queryset)
         queryset.select_related('user')
-        queryset=queryset.filter(user__is_active=True)
-        queryset=queryset.filter(is_vc_available=True)
+        queryset = queryset.filter(user__is_active=True)
+
         queryset.prefetch_related('address', 'phone', 'email')
-        queryset=queryset.annotate(experiance=ExpressionWrapper(dtd.today()-F('practice_started'),output_field=DurationField()))
+        queryset = queryset.annotate(experiance=ExpressionWrapper(
+            dtd.today()-F('practice_started'), output_field=DurationField()))
+
         return queryset
 
     def apply_filters(self, queryset):
-        if self.min_price:
-            queryset = queryset.filter(charge_per_app__gte=self.min_price)
-        if self.max_price:
-            queryset = queryset.filter(charge_per_app__lte=self.max_price)
+        if self.request.GET.get('vc') == 'true':
+            queryset = queryset.filter(is_vc_available=True)
+        if self.min_price and self.request.GET.get('vc') == 'true':
+            queryset = queryset.filter(
+                charge_per_vc__gte=float(self.min_price))
+        elif self.min_price:
+            queryset = queryset.filter(
+                charge_per_app__gte=float(self.min_price))
+
+        if self.max_price and self.request.GET.get('vc') == 'true':
+            queryset = queryset.filter(
+                charge_per_vc__lte=float(self.max_price))
+        elif self.max_price:
+            queryset = queryset.filter(
+                charge_per_app__lte=float(self.max_price))
         if self.min_rating:
-            queryset = queryset.filter(avg_rating__gte=self.min_rating)
+            queryset = queryset.filter(avg_rating__gte=float(self.min_rating))
         if self.max_rating:
-            queryset = queryset.filter(avg_rating__lte=self.max_rating)
-        tz=pytz.timezone('Asia/Kolkata')
-        today=tz.localize(datetime.datetime.now()).replace(hour=0,minute=0, second=0,microsecond=0)
+            queryset = queryset.filter(avg_rating__lte=float(self.max_rating))
+        tz = pytz.timezone('Asia/Kolkata')
+        today = tz.localize(datetime.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0)
         if self.min_exp:
-            queryset = queryset.filter(practice_started__lte=(today-timedelta(seconds=31556952*int(self.min_exp))))
+            queryset = queryset.filter(practice_started__lte=(
+                today-timedelta(seconds=31556952*int(self.min_exp))))
         if self.max_exp:
-            queryset = queryset.filter(practice_started__gte=(today-timedelta(seconds=31556952*int(self.max_exp))))
+            queryset = queryset.filter(practice_started__gte=(
+                today-timedelta(seconds=31556952*int(self.max_exp))))
         if self.name_search:
             queryset = queryset.filter(Q(first_name__icontains=self.name_search) | Q(
                 last_name__icontains=self.name_search))
         if self.speciality:
-            queryset = queryset.filter(speciality=self.speciality)
+            queryset = queryset.filter(speciality__icontains=self.speciality)
         return queryset
 
     def get_filters(self):
@@ -96,8 +114,7 @@ class DoctorList(APIView):
     # firebase_admin.initialize_app(cred)
 
 
-def getToken(id):
-    import hashlib
+def getToken(id, channelName):
     import time
     from .RtcTokenBuilder import RtcTokenBuilder, Role_Attendee
     appID = "b77289b8a5024ba9ad55ffa686e3af1b"
@@ -109,8 +126,6 @@ def getToken(id):
 
     privilegeExpiredTs = currentTimestamp + expireTimeInSeconds
 
-    channelName = hashlib.sha256(
-        (str(currentTimestamp)+userAccount).encode()).hexdigest()
     token = RtcTokenBuilder.buildTokenWithAccount(
         appID, appCertificate, channelName, userAccount, Role_Attendee, privilegeExpiredTs)
     # print(help(serializer1))
@@ -128,6 +143,15 @@ def getToken(id):
     #     "foo": "bar",
     #     "key": "value",
     # }
+
+
+def create_channel_name(userAccount1, userAccount2):
+    import hashlib
+    import time
+    currentTimestamp = int(time.time())
+    channelName = hashlib.sha256(
+        (str(currentTimestamp)+userAccount1+userAccount2).encode()).hexdigest()
+    return channelName
 
 
 class Call(APIView):
@@ -156,12 +180,15 @@ class Call(APIView):
             return Response(data=data, status=HTTP_404_NOT_FOUND)
         #registration_token = doctor.data['token']
         fcm_token = doctor.fcm_token
-        doctor_tocken = getToken(doct_user_id)
-        patient_tocken = getToken(request.user.id)
+        channel_name = create_channel_name(
+            str(doct_user_id), str(request.user.id))
+        doctor_tocken = getToken(doct_user_id, channel_name)
+        patient_tocken = getToken(request.user.id, channel_name)
+
         print(doctor_tocken, patient_tocken)
-        doctor_tocken['channel_name']=patient_tocken['channel_name']
+        doctor_tocken['channel_name'] = patient_tocken['channel_name']
         #d = dict(doc=doctor_tocken, pat=patient_tocken)
-        print(doctor_tocken,'\n', patient_tocken)
+        print(doctor_tocken, '\n', patient_tocken)
         message = messaging.Message(
             data=doctor_tocken,
             notification=messaging.Notification(
@@ -176,7 +203,7 @@ class Call(APIView):
         # App Certificate e0b9a9f54c084e2fa499d037fe23cef6
         try:
             response = messaging.send(message)
-        except Exception  as e:
+        except Exception as e:
             response = None
             print('coudnt send message')
             raise e
@@ -213,7 +240,7 @@ class PatCallEnd(APIView):
     permission_required = [IsAuthenticated, IsDoctor, IsActive]
 
     def post(self, request, format=None):
-        patient:Patient = Patient.objects.get(user=request.user)
+        patient: Patient = Patient.objects.get(user=request.user)
         active_calls = ActiveCall.objects.filter(patient=patient)
         for active_call in active_calls:
             call_log = CallLogs.objects.create(
@@ -227,33 +254,36 @@ class PatCallEnd(APIView):
 
 
 class CallingState(APIView):
-    permission_classes=[IsAuthenticated,IsDoctor,IsActive]
-    def get(self, request,*args,**kwargs):
-        status:str=request.GET.get('state')
-        if status.lower()=='on':
-            status=True
-        elif status.lower()=='off':
-            status=False
+    permission_classes = [IsAuthenticated, IsDoctor, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        status: str = request.GET.get('state')
+        if status.lower() == 'on':
+            status = True
+        elif status.lower() == 'off':
+            status = False
         else:
-            return Response({'Error': 'invalid status in request parameter'},status=HTTP_400_BAD_REQUEST)
-        doctor:Doctor=Doctor.objects.get(user=request.user)
-        if doctor.is_vc_available==status:
-            return Response({'Error': 'Your current status is same as requested status'},status=HTTP_208_ALREADY_REPORTED)
-        doctor.is_vc_available=status
+            return Response({'Error': 'invalid status in request parameter'}, status=HTTP_400_BAD_REQUEST)
+        doctor: Doctor = Doctor.objects.get(user=request.user)
+        if doctor.is_vc_available == status:
+            return Response({'Error': 'Your current status is same as requested status'}, status=HTTP_208_ALREADY_REPORTED)
+        doctor.is_vc_available = status
         doctor.save()
         return Response(status=HTTP_200_OK)
 
-    
 
 class GetCallLogs(APIView):
-    permission_classes=[IsAuthenticated,IsDoctor|IsPatient,IsActive]
-    def get(self, request,*args,**kwargs):
-        if request.user.user_type=='P':
-            qs=CallLogs.objects.filter(patient=Patient.objects.get(user=request.user))
-            serializer=CallLogSerializer(qs,fields=['id','doctor','start_time','end_time'],many=True)
+    permission_classes = [IsAuthenticated, IsDoctor | IsPatient, IsActive]
+
+    def get(self, request, *args, **kwargs):
+        if request.user.user_type == 'P':
+            qs = CallLogs.objects.filter(
+                patient=Patient.objects.get(user=request.user))
+            serializer = CallLogSerializer(qs, fields=[
+                                           'id', 'doctor', 'start_time', 'end_time', 'doctor_name', 'doctor_profile'], many=True)
         else:
-            qs=CallLogs.objects.filter(patient=Patient.objects.get(user=request.user,many=True))
-            serializer=CallLogSerializer(qs,fields=['id','doctor','start_time','end_time'],many=True)
-        return Response(serializer.data,status=HTTP_200_OK)
-
-
+            qs = CallLogs.objects.filter(
+                patient=Patient.objects.get(user=request.user))
+            serializer = CallLogSerializer(qs, fields=[
+                                           'id', 'doctor', 'start_time', 'end_time', 'patient_name', 'patient_profile'], many=True)
+        return Response(serializer.data, status=HTTP_200_OK)

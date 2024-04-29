@@ -76,8 +76,8 @@ class DoctorSerializer(DynamicFieldsModelSerializer):
             'call_active': {'required': False}, }
     def validate(self, attrs):
         tz=pytz.timezone('Asia/Kolkata')
-        attrs['start_time']=tz.localize(attrs['start_time']).replace(second=0,microsecond=0)
-        attrs['end_time']=tz.localize(attrs['end_time']).replace(second=0,microsecond=0)
+        attrs['start_time']=attrs['start_time'].replace(second=0,microsecond=0)
+        attrs['end_time']=attrs['end_time'].replace(second=0,microsecond=0)
         return attrs;
     def create(self, data):
         patient = self.context['request'].user.person.patient
@@ -566,5 +566,13 @@ class GrantedSerializer(DynamicFieldsModelSerializer):
         model=Granted
         fields='__all__'
     def create(self, validated_data):
-        grant=Granted.objects.create(**validated_data,asking_user=self.context['asking_user'])
+        grant=Granted.objects.create(**validated_data, granting_user=self.context['granting_user'])
         return grant;
+class ListClass:
+    def __init__(self,list_):
+        self.symptom_list=list_
+    
+class SymptomsSerializer(serializers.Serializer):
+    symptom_list = serializers.ListField(child=serializers.IntegerField(min_value=0, max_value=1))
+    def create(self, validated_data):
+        return ListClass(validated_data['symptom_list'])

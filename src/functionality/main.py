@@ -1,6 +1,7 @@
 from fpdf import FPDF
 from datetime import datetime
 import json
+from healthware.settings import MEDIA_ROOT
 
 json_info = '{"email":"suyog12@gmail.com","password":"hvhjbmnb","country_code":"+91","phone":"8767564534","patient":{"first_name":"suyog","last_name":"jhdsckj","dob":"2000-07-27","gender":"M","married":"M","occupation":"Zak Marto","blood_group":"A+","education":"7th"},"address":[{"house_no":"hgjhuabiufbuwbf","locality":"gfhjaaiuabwujh"}],"emergency_contact":[{"country_code":"+91","phone_no":"85645454545454","relation":"hghbj"}],"allergies":[{"allergies":"ffgghh","description":"rr"},{"allergies":"cffffghhh","description":"fff"},{"allergies":"ffghhh","description":"ff"}],"past_diseases":[{"past_diseases":"fgyfggt","description":"gg"},{"past_diseases":"gghujjgdff","description":"ff"},{"past_diseases":"vvhhhg","description":"eer"}],"addictions":[{"addiction":"gtgyhjjj","current":true},{"addiction":"hhgfdddd","current":true},{"addiction":"fgh","current":true}],"weight":[{"weight":"12","date":"2000-07-27"}],"height":[{"height":"11","date":"2000-07-27"},{"height":"1","date":"2000-07-27"}],"cholesterol":[{"date":"2021-06-15","HDL":"55","LDL":"55"},{"date":"2021-06-16","HDL":"56","LDL":"555"},{"date":"2021-06-09","HDL":"999","LDL":"88"}],"blood_pressure":[{"date":"2021-06-09","systolic":"58","diastolic":"08"},{"date":"2021-06-09","systolic":"96","diastolic":"55"},{"date":"2021-06-09","systolic":"55","diastolic":"55"}],"glocose":[{"date":"2021-06-16","pre_meal":"88","post_meal":"88"},{"date":"2021-06-16","pre_meal":"85","post_meal":"55"},{"date":"2021-06-16","pre_meal":"85","post_meal":"88"}]}'
 
@@ -40,7 +41,7 @@ class PDF(FPDF):
         self.ln()
 
 
-def report_gen(info, path, filename):
+def report_gen(info, id_, path, filename):
     pdf = PDF('P', 'mm', 'A4')
     pdf.set_margins(20, 10, 20)
 
@@ -119,6 +120,13 @@ def report_gen(info, path, filename):
             abc=info["addictions"][i]["addiction"]
             pdf.cell(w=0,h=10, txt=str(i + 1) + ". " +
                     abc if abc else 'None', ln=True)
+        print(MEDIA_ROOT)
+    pdf.image(f"{MEDIA_ROOT}\\{id_}\\bp_graph.jpg", w=160, h=100)
+    pdf.ln(9)
+    pdf.image(f'{MEDIA_ROOT}\\{id_}\\cholesterol_graph.jpg', w=160, h=100)
+    pdf.ln(9)
+    pdf.image(f"{MEDIA_ROOT}\\{id_}\\glocose_graph.jpg", w=160, h=100)
+
     print(path+filename)
     pdf.output(path+filename)
 
